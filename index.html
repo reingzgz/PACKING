@@ -33,6 +33,8 @@ header{position:sticky;top:0;z-index:40;background:var(--ink);color:#fff}
 .htop{display:flex;align-items:center;gap:10px;padding:9px 12px}
 .brand{font-weight:800;letter-spacing:.14em;font-size:12px;text-transform:uppercase;white-space:nowrap}
 .brand span{color:var(--amber)}
+.vchip{font-family:var(--mono);font-size:11px;font-weight:800;color:#171008;background:var(--amber);
+  padding:2px 7px;border-radius:99px;letter-spacing:.04em}
 .active-cont{margin-left:auto;min-width:0}
 .active-cont select{background:#222a30;color:#fff;border:1px solid #3c464e;border-radius:7px;padding:7px 8px;max-width:56vw;font-size:14px}
 nav{display:flex;overflow-x:auto;background:#1b2126;scrollbar-width:none}
@@ -188,6 +190,7 @@ details.guia code{background:#e9edeb;padding:1px 5px;border-radius:4px;font-fami
   <div class="hz"></div>
   <div class="htop">
     <div class="brand">Packing <span>/</span> List</div>
+    <span class="vchip" id="vr_chip">v3</span>
     <div class="active-cont"><select id="selCam"></select></div>
   </div>
   <nav id="nav">
@@ -1068,8 +1071,9 @@ $('#dl_borrar').addEventListener('click', ()=>{
 });
 
 /* ================= versión y actualización ================= */
-const VERSION = 'v2';
+const VERSION = 'v3';
 $('#vr_num').textContent = VERSION;
+$('#vr_chip').textContent = VERSION;
 $('#vr_check').addEventListener('click', async ()=>{
   $('#vr_check').disabled = true;
   $('#vr_info').textContent = 'Borrando la copia guardada…';
@@ -1367,7 +1371,27 @@ SIN_SUBIR = false;
 pintaNube();
 setInterval(()=>{ if(!$('#v-tab').classList.contains('hide')) pintaTablero(); }, 60000);
 
-if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+/* El navegador guarda el propio sw.js hasta diez minutos, y por eso a veces
+   una PDA se quedaba con la versión vieja. Con updateViaCache:'none' se pide
+   siempre al servidor, y si hay una versión nueva la app se recarga sola una
+   vez (el aviso en sessionStorage evita que entre en bucle). */
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  navigator.serviceWorker.register('sw.js', {updateViaCache:'none'}).then(reg=>{
+    reg.update().catch(()=>{});
+    setInterval(()=>reg.update().catch(()=>{}), 30*60*1000);
+    reg.addEventListener('updatefound', ()=>{
+      const nuevo = reg.installing; if(!nuevo) return;
+      nuevo.addEventListener('statechange', ()=>{
+        if(nuevo.state==='installed' && navigator.serviceWorker.controller
+           && !sessionStorage.getItem('pk_recargado')){
+          sessionStorage.setItem('pk_recargado','1');
+          toast('Versión nueva: recargando…','ok');
+          setTimeout(()=>location.reload(), 900);
+        }
+      });
+    });
+  }).catch(()=>{});
+}
 </script>
 </body>
 </html>
