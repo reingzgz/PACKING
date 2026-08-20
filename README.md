@@ -100,12 +100,19 @@ mandar, y *al día* con la hora cuando ya está todo arriba.
 
 ### 6 · Publicar cambios más adelante
 
+Cada versión de la app lleva un número, que se ve en **Datos → Versión**. Esta
+es la **v2**. Para publicar una nueva:
+
 1. En el repositorio, entra en `sw.js` y pulsa el lápiz para editarlo.
-2. Cambia `packing-v1` por `packing-v2` (y así sucesivamente). **Este paso es
+2. Cambia `packing-v2` por `packing-v3` (y así sucesivamente). **Este paso es
    obligatorio**: si no subes el número, las PDAs seguirán con la versión vieja.
 3. Sube el `index.html` nuevo con **Add file → Upload files**; GitHub te
    preguntará si quieres reemplazar el que ya está y le dices que sí.
 4. Las PDAs se actualizarán solas la próxima vez que tengan red.
+
+**Si una PDA no se actualiza**, entra en **Datos → Versión**, mira el número y
+pulsa **Buscar actualización ahora**. Borra la copia guardada y vuelve a bajar
+la app del servidor. Los camiones y los bultos no se tocan: viven aparte.
 
 ---
 

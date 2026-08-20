@@ -169,6 +169,13 @@ tr.tot td{background:#f4f6f5;font-weight:800}
 .hojas{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .hojas button{border:1.5px solid var(--line);background:#fff;border-radius:8px 8px 0 0;padding:7px 12px;font-size:12.5px;font-weight:700;cursor:pointer}
 .hojas button.on{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}
+.verfila{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.vernum{font-family:var(--mono);font-size:34px;font-weight:800;line-height:1;color:var(--amber-d)}
+.verfila>div{flex:1 1 240px}
+details.guia{margin-top:10px;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;background:#f8faf9}
+details.guia summary{cursor:pointer;font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--steel);font-weight:800}
+details.guia ol{margin:10px 0 0;padding-left:20px;line-height:1.8;font-size:13px;color:var(--steel)}
+details.guia code{background:#e9edeb;padding:1px 5px;border-radius:4px;font-family:var(--mono);font-size:12px}
 
 #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(120%);background:var(--ink);color:#fff;padding:12px 18px;border-radius:10px;font-weight:700;font-size:14px;z-index:90;transition:transform .22s;max-width:90vw;text-align:center}
 #toast.show{transform:translateX(-50%) translateY(0)}
@@ -334,6 +341,21 @@ tr.tot td{background:#f4f6f5;font-weight:800}
 <!-- ============ DATOS ============ -->
 <section id="v-datos" class="hide">
   <div class="card">
+    <h2>Versión</h2>
+    <div class="verfila">
+      <span class="vernum" id="vr_num">v2</span>
+      <div>
+        <p class="hint" style="margin:0">Si una PDA enseña un número más bajo, tiene una copia antigua guardada.
+          Pulsa el botón: borra la copia y vuelve a bajar la app. <b>Los datos no se tocan.</b></p>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn pri" id="vr_check">Buscar actualización ahora</button>
+    </div>
+    <p class="hint" style="margin-top:8px" id="vr_info"></p>
+  </div>
+
+  <div class="card">
     <h2>Reglas de lectura del código</h2>
     <div class="row">
       <div><label>Unidades: nº de dígitos</label><input id="cf_len" type="number" inputmode="numeric" min="1" max="6"></div>
@@ -358,7 +380,21 @@ tr.tot td{background:#f4f6f5;font-weight:800}
     <div class="row" style="margin-top:8px">
       <div style="flex:1 1 100%"><label>Token de GitHub (permiso de lectura y escritura de contenidos)</label><input id="sy_token" class="mono" type="password" placeholder="github_pat_…" autocomplete="off"></div>
     </div>
-    <p class="hint" style="margin-top:6px">El token se crea en GitHub → Settings → Developer settings → Fine-grained tokens, con permiso <b>Contents: Read and write</b> sólo en este repositorio. Se guarda únicamente en este dispositivo, nunca se sube a ningún sitio.</p>
+    <p class="hint" style="margin-top:6px">El token es la contraseña que permite a la app escribir en tu repositorio. Se guarda sólo en este dispositivo y nunca viaja dentro de los datos que se suben.</p>
+    <details class="guia">
+      <summary>De dónde saco el token — paso a paso</summary>
+      <ol>
+        <li>Entra en <code>github.com</code> con tu cuenta, en un ordenador.</li>
+        <li>Arriba a la derecha, pulsa tu foto → <b>Settings</b>.</li>
+        <li>Baja del todo en el menú de la izquierda → <b>Developer settings</b>.</li>
+        <li><b>Personal access tokens</b> → <b>Fine-grained tokens</b> → botón <b>Generate new token</b>.</li>
+        <li>Nombre: <code>packing</code>. Caducidad (<i>Expiration</i>): la más larga que te deje, o <i>No expiration</i>.</li>
+        <li>En <i>Repository access</i> marca <b>Only select repositories</b> y elige el repositorio donde está publicada esta app.</li>
+        <li>En <i>Permissions → Repository permissions</i>, busca <b>Contents</b> y ponlo en <b>Read and write</b>.</li>
+        <li>Abajo, <b>Generate token</b>. Sale un código largo que empieza por <code>github_pat_</code>: <b>cópialo ahora</b>, porque GitHub no vuelve a enseñarlo.</li>
+        <li>Pégalo aquí arriba y pulsa «Guardar estos datos de conexión». Repítelo en cada PDA.</li>
+      </ol>
+    </details>
     <div class="actions">
       <button class="btn gh" id="sy_savecfg">Guardar estos datos de conexión</button>
       <button class="btn pri" id="sy_push">Subir mis datos a la nube</button>
@@ -1029,6 +1065,29 @@ $('#dl_borrar').addEventListener('click', ()=>{
   if(!confirm('¿Borrar TODOS los camiones de este dispositivo?\n\nDescarga antes el respaldo.')) return;
   if(!confirm('Última pregunta. Esto no se puede deshacer.')) return;
   S.cams=[]; S.sel=null; save(); render(); toast('Todo borrado','ok');
+});
+
+/* ================= versión y actualización ================= */
+const VERSION = 'v2';
+$('#vr_num').textContent = VERSION;
+$('#vr_check').addEventListener('click', async ()=>{
+  $('#vr_check').disabled = true;
+  $('#vr_info').textContent = 'Borrando la copia guardada…';
+  /* Se tira el service worker y todas las cachés y se recarga, así la PDA
+     vuelve a bajar el index.html del servidor. Los datos viven en
+     localStorage, que esto no toca. */
+  try{
+    if('serviceWorker' in navigator){
+      const rs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(rs.map(r=>r.unregister()));
+    }
+    if(window.caches){
+      const ks = await caches.keys();
+      await Promise.all(ks.map(k=>caches.delete(k)));
+    }
+  }catch(e){}
+  $('#vr_info').textContent = 'Recargando…';
+  setTimeout(()=>location.reload(), 400);
 });
 
 /* ================= sincronización con GitHub =================
