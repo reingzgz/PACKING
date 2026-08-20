@@ -101,10 +101,11 @@ mandar, y *al día* con la hora cuando ya está todo arriba.
 ### 6 · Publicar cambios más adelante
 
 Cada versión de la app lleva un número, que se ve en **Datos → Versión**. Esta
-es la **v2**. Para publicar una nueva:
+es la **v4**. Para publicar una nueva:
 
 1. En el repositorio, entra en `sw.js` y pulsa el lápiz para editarlo.
-2. Cambia `packing-v2` por `packing-v3` (y así sucesivamente). **Este paso es
+2. Cambia `packing-v4` por `packing-v5` (y así sucesivamente), y en `index.html`
+   busca `const VERSION = 'v4';` y súbelo igual. **Este paso es
    obligatorio**: si no subes el número, las PDAs seguirán con la versión vieja.
 3. Sube el `index.html` nuevo con **Add file → Upload files**; GitHub te
    preguntará si quieres reemplazar el que ya está y le dices que sí.
@@ -147,6 +148,12 @@ Tocando un bulto de la lista se corrigen sus unidades o se quita. La corrección
 queda registrada: en el Excel salen las unidades que se leyeron y quién las
 cambió.
 
+Arriba de los bultos hay una barra negra con el **pale actual** y cuántos
+bultos y unidades lleva. El botón **Cerrar pale** hace el conteo (bultos y
+uds), lo confirma, lo deja guardado como pale cerrado, y abre el siguiente
+pale con el número siguiente. Los pales cerrados quedan como chips debajo de
+la barra, y en el Excel cada bulto lleva su número de pale.
+
 Al terminar, **Packing terminado** cierra el packing y lleva a la pantalla del
 packing list.
 
@@ -180,10 +187,10 @@ Configurables en la pestaña Datos. Por defecto, sobre `84178016200200287`:
 
 Tres hojas:
 
-1. **Packing list** — una línea por bulto: camión, fecha, nº de bulto, código,
-   mocacota, unidades, unidades leídas antes de corregir, quién corrigió,
-   operario, anomalía, observaciones, hora, y las marcas de túnel y expedición
-   repetidas en cada línea para poder filtrar.
+1. **Packing list** — una línea por bulto: camión, fecha, pale, nº de bulto,
+   código, mocacota, unidades, unidades leídas antes de corregir, quién
+   corrigió, operario, anomalía, observaciones, hora, y las marcas de túnel y
+   expedición repetidas en cada línea para poder filtrar.
 2. **Resumen por artículo** — cuántos bultos hay de cada artículo y tamaño, y
    cuántas unidades suman.
 3. **Camiones** — una línea por camión con su estado y todas sus horas.
