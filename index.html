@@ -39,6 +39,16 @@ nav{display:flex;overflow-x:auto;background:#1b2126;scrollbar-width:none}
 nav::-webkit-scrollbar{display:none}
 nav button{flex:1 0 auto;background:none;border:0;border-bottom:3px solid transparent;color:#96a2ab;padding:11px 14px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
 nav button.on{color:#fff;border-bottom-color:var(--amber)}
+.nube{display:flex;gap:8px;align-items:center;padding:8px 12px;background:#222a30;border-top:1px solid #2f393f}
+.nube .nb{flex:0 0 auto;border:1.5px solid #3c464e;background:#2b343b;color:#fff;font-weight:700;
+  font-size:12.5px;padding:8px 12px;border-radius:8px;cursor:pointer;font-family:inherit;white-space:nowrap}
+.nube .nb.sub{background:var(--amber);border-color:var(--amber);color:#171008}
+.nube .nb:disabled{opacity:.5;cursor:wait}
+.nube .nb_est{flex:1;min-width:0;font-size:11.5px;color:#95a1aa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nube .nb_est b{color:#fff}
+.nube .nb_est.pend{color:#ffcf8f}
+.nube .nb_est.malo{color:#ff9d92}
+@media (max-width:520px){ .nube .nb{font-size:11.5px;padding:7px 9px} }
 
 main{max-width:1180px;margin:0 auto;padding:14px 12px 90px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
@@ -76,7 +86,7 @@ input[readonly]{background:#f4f6f5;color:var(--steel)}
 .et b{display:block;font-family:var(--mono);font-size:22px;font-weight:800;line-height:1.1}
 .et span{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);font-weight:700}
 .et.e0 b{color:var(--steel)} .et.e1 b{color:var(--amber-d)} .et.e2 b{color:var(--steel)}
-.et.e3 b{color:var(--cold)} .et.e4 b{color:var(--cold)} .et.e5 b{color:var(--ok)}
+.et.e3 b{color:var(--cold)} .et.e4 b{color:var(--ok)}
 
 /* tarjeta de camión */
 .clist{display:grid;gap:10px}
@@ -179,6 +189,11 @@ tr.tot td{background:#f4f6f5;font-weight:800}
     <button data-v="pack">Packing list</button>
     <button data-v="datos">Datos</button>
   </nav>
+  <div class="nube">
+    <button class="nb sub" id="nb_push">&#8593; Subir a la nube</button>
+    <button class="nb" id="nb_pull">&#8595; Traer de la nube</button>
+    <span class="nb_est" id="nb_est"></span>
+  </div>
 </header>
 
 <main>
@@ -333,6 +348,26 @@ tr.tot td{background:#f4f6f5;font-weight:800}
   </div>
 
   <div class="card">
+    <h2>Sincronización online</h2>
+    <p class="hint">Guarda una copia de los datos de este dispositivo en el propio repositorio de GitHub donde está publicada la app, en un archivo <code>sync/packing.json</code>, para poder traerla a otra PDA. No hace falta ningún servidor. Cada PDA decide cuándo subir y cuándo traer: no es automático ni en tiempo real.</p>
+    <div class="row">
+      <div><label>Usuario/organización</label><input id="sy_owner" class="mono" placeholder="TU-USUARIO" autocomplete="off"></div>
+      <div><label>Repositorio</label><input id="sy_repo" class="mono" placeholder="TU-REPO" autocomplete="off"></div>
+      <div><label>Rama</label><input id="sy_branch" class="mono" placeholder="main" autocomplete="off"></div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <div style="flex:1 1 100%"><label>Token de GitHub (permiso de lectura y escritura de contenidos)</label><input id="sy_token" class="mono" type="password" placeholder="github_pat_…" autocomplete="off"></div>
+    </div>
+    <p class="hint" style="margin-top:6px">El token se crea en GitHub → Settings → Developer settings → Fine-grained tokens, con permiso <b>Contents: Read and write</b> sólo en este repositorio. Se guarda únicamente en este dispositivo, nunca se sube a ningún sitio.</p>
+    <div class="actions">
+      <button class="btn gh" id="sy_savecfg">Guardar estos datos de conexión</button>
+      <button class="btn pri" id="sy_push">Subir mis datos a la nube</button>
+      <button class="btn gh" id="sy_pull">Traer datos de la nube</button>
+    </div>
+    <p class="hint" style="margin-top:10px" id="sy_info">Sin configurar todavía.</p>
+  </div>
+
+  <div class="card">
     <h2>Descargas y respaldo</h2>
     <p class="hint">Los datos se guardan en este dispositivo. Descarga el respaldo al cerrar cada jornada.</p>
     <div class="actions">
@@ -367,9 +402,26 @@ function load(){
     const d = JSON.parse(localStorage.getItem('pk_cams')||'null');
     if(Array.isArray(d)) S.cams = d;
   }catch(e){}
+  migra(S.cams);
 }
+/* Versiones anteriores guardaban entrada y salida del túnel por separado.
+   Ahora hay un solo hito: se queda la salida si existe y, si no, la entrada. */
+function migra(cams){
+  cams.forEach(c=>{
+    c.h = c.h || {}; c.hQuien = c.hQuien || {}; c.scans = c.scans || [];
+    if(c.h.tunelIn || c.h.tunelOut){
+      c.h.tunel = c.h.tunelOut || c.h.tunelIn;
+      c.hQuien.tunel = c.hQuien.tunelOut || c.hQuien.tunelIn || '';
+      delete c.h.tunelIn; delete c.h.tunelOut;
+      delete c.hQuien.tunelIn; delete c.hQuien.tunelOut;
+    }
+    if(!c.ts) c.ts = c.h.expedido || c.h.tunel || c.h.packingFin || c.h.llegada || new Date().toISOString();
+  });
+}
+let SIN_SUBIR = false;
 let tSave=null;
 function save(){
+  SIN_SUBIR = true; pintaNube();
   clearTimeout(tSave);
   tSave = setTimeout(()=>{
     try{
@@ -409,53 +461,50 @@ function desde(ts){
 
 /* ============ las cinco posiciones del camión ============ */
 const ETAPAS = [
-  {k:'llegada',   n:'Llegado',    corta:'Llegada'},
-  {k:'packing',   n:'Packing',    corta:'Packing'},
+  {k:'llegada',   n:'Llegado',       corta:'Llegada'},
+  {k:'packing',   n:'Packing',       corta:'Packing'},
   {k:'packingFin',n:'Packing hecho', corta:'Hecho'},
-  {k:'tunelIn',   n:'En el túnel',corta:'Túnel'},
-  {k:'tunelOut',  n:'Túnel hecho',corta:'Frío ok'},
-  {k:'expedido',  n:'Expedido',   corta:'Expedido'}
+  {k:'tunel',     n:'Túnel hecho',   corta:'Túnel'},
+  {k:'expedido',  n:'Expedido',      corta:'Expedido'}
 ];
 function etapa(c){
   const h=c.h||{};
-  if(h.expedido) return 5;
-  if(h.tunelOut) return 4;
-  if(h.tunelIn)  return 3;
+  if(h.expedido) return 4;
+  if(h.tunel) return 3;
   if(h.packingFin) return 2;
   if(nBultos(c)) return 1;
   return 0;
 }
 function tsEtapa(c){
   const h=c.h||{};
-  const e=etapa(c);
-  return [h.llegada, h.packingIni, h.packingFin, h.tunelIn, h.tunelOut, h.expedido][e] || h.llegada;
+  return [h.llegada, h.packingIni, h.packingFin, h.tunel, h.expedido][etapa(c)] || h.llegada;
 }
 /* qué botón toca ahora */
 function siguiente(c){
   switch(etapa(c)){
     case 0: return {k:'ir', txt:'Empezar el packing'};
     case 1: return {k:'packingFin', txt:'Packing terminado'};
-    case 2: return {k:'tunelIn', txt:'Entra en el túnel'};
-    case 3: return {k:'tunelOut', txt:'Sale del túnel'};
-    case 4: return {k:'expedido', txt:'Marcar como expedido'};
+    case 2: return {k:'tunel', txt:'Pasado por túnel'};
+    case 3: return {k:'expedido', txt:'Marcar como expedido'};
     default: return null;
   }
 }
 const HITO_NOMBRE = {llegada:'Llegada', packingIni:'Packing empezado', packingFin:'Packing terminado',
-                     tunelIn:'Entrada al túnel', tunelOut:'Salida del túnel', expedido:'Expedido'};
+                     tunel:'Pasado por túnel', expedido:'Expedido'};
 function marca(c, k, quien){
   c.h = c.h || {};
   c.h[k] = new Date().toISOString();
   c.hQuien = c.hQuien || {};
   c.hQuien[k] = quien || S.cfg.operario || '';
+  c.ts = new Date().toISOString();
   save();
 }
 function desmarca(c, k){
   if(!c.h) return;
   /* al deshacer un hito se caen también los posteriores */
-  const orden = ['llegada','packingIni','packingFin','tunelIn','tunelOut','expedido'];
-  const i = orden.indexOf(k);
-  orden.slice(i).forEach(x=>{ delete c.h[x]; if(c.hQuien) delete c.hQuien[x]; });
+  const orden = ['llegada','packingIni','packingFin','tunel','expedido'];
+  orden.slice(orden.indexOf(k)).forEach(x=>{ delete c.h[x]; if(c.hQuien) delete c.hQuien[x]; });
+  c.ts = new Date().toISOString();
   save();
 }
 
@@ -490,18 +539,18 @@ $('#selCam').addEventListener('change', e=>{ S.sel=e.target.value; save(); rende
 /* ================= tablero ================= */
 let FILTRO = null;
 function railHtml(c){
-  const e = etapa(c);
+  const e = etapa(c), N = ETAPAS.length;
   let h='<div class="rail">';
-  for(let i=0;i<6;i++){
+  for(let i=0;i<N;i++){
     h += `<div class="nd ${i<e?'done':(i===e?'cur':'')}"></div>`;
-    if(i<5) h += `<div class="ln ${i<e?'done':''}"></div>`;
+    if(i<N-1) h += `<div class="ln ${i<e?'done':''}"></div>`;
   }
   h += '</div><div class="raill">' + ETAPAS.map((x,i)=>`<span class="${i===e?'cur':''}">${x.corta}</span>`).join('') + '</div>';
   return h;
 }
 function pintaTablero(){
   const cont = $('#tb_etapas');
-  const cuenta = [0,0,0,0,0,0];
+  const cuenta = ETAPAS.map(()=>0);
   S.cams.forEach(c=>cuenta[etapa(c)]++);
   cont.innerHTML = ETAPAS.map((x,i)=>
     `<div class="et e${i} ${FILTRO===i?'on':''}" data-e="${i}"><b>${cuenta[i]}</b><span>${x.n}</span></div>`).join('');
@@ -517,7 +566,7 @@ function pintaTablero(){
   if(!lista.length){ L.innerHTML='<div class="empty">No hay camiones que enseñar aquí.</div>'; return; }
   L.innerHTML = lista.map(c=>{
     const e=etapa(c), sig=siguiente(c);
-    const chipK = ['pend','amb','pend','cold','cold','ok'][e];
+    const chipK = ['pend','amb','pend','cold','ok'][e];
     return `<div class="citem ${c.id===S.sel?'sel':''}" data-id="${c.id}">
       <div class="cabc">
         <div>
@@ -576,7 +625,7 @@ $('#nc_add').addEventListener('click', ()=>{
   if(S.cams.some(c=>c.codigo===cod && c.fecha===fec)) return toast('Ese camión ya está dado de alta','ko');
   const c = {
     id: 'c'+Date.now().toString(36),
-    codigo: cod, fecha: fec, obs:'', operario:'', scans: [],
+    codigo: cod, fecha: fec, obs:'', operario:'', scans: [], ts: new Date().toISOString(),
     patron: null,
     h: { llegada: new Date().toISOString() },
     hQuien: { llegada: S.cfg.operario||'' }
@@ -662,6 +711,7 @@ $('#eb_guardar').addEventListener('click', ()=>{
   const x = c.scans[EB_I], antes = x.u;
   if(x.uOrig===undefined) x.uOrig = antes;
   x.u = n; x.man = true; x.manQuien = S.cfg.operario||'';
+  c.ts = new Date().toISOString();
   save(); pintaGrab();
   eco('good', (n>antes?'+':'')+(n-antes)+' uds', `Bulto ${EB_I+1} corregido de ${antes} a ${n}`);
   cierraEd();
@@ -670,7 +720,7 @@ $('#eb_quitar').addEventListener('click', ()=>{
   const c=cam(); if(EB_I===null||!c) return;
   const x = c.scans[EB_I];
   if(!confirm(`¿Quitar el bulto ${EB_I+1}? Son ${x.u} uds.`)) return;
-  c.scans.splice(EB_I,1); save(); pintaGrab();
+  c.scans.splice(EB_I,1); c.ts = new Date().toISOString(); save(); pintaGrab();
   eco('bad','−'+x.u+' uds','Bulto quitado');
   cierraEd();
 });
@@ -712,6 +762,7 @@ function mete(c, cod, anom){
   if(!c.operario) c.operario = S.cfg.operario||'';
   if(!c.h.packingIni) marca(c,'packingIni');
   c.scans.push({c:cod, u, t:new Date().toISOString(), anom: anom||''});
+  c.ts = new Date().toISOString();
   save();
   pintaGrab(); pintaSelector();
   eco('good', '+'+u+' uds', `Bulto ${c.scans.length} · total ${miles(totalUds(c))} uds`);
@@ -765,10 +816,10 @@ $('#g_scan').addEventListener('keydown', e=>{
 });
 $('#g_undo').addEventListener('click', ()=>{
   const c=cam(); if(!c || !c.scans.length) return toast('No hay nada que quitar','ko');
-  const x = c.scans.pop(); save(); pintaGrab();
+  const x = c.scans.pop(); c.ts = new Date().toISOString(); save(); pintaGrab();
   eco('bad','−'+x.u+' uds','Último bulto quitado'); foco();
 });
-$('#g_obs').addEventListener('input', ()=>{ const c=cam(); if(c){ c.obs = $('#g_obs').value; save(); } });
+$('#g_obs').addEventListener('input', ()=>{ const c=cam(); if(c){ c.obs = $('#g_obs').value; c.ts = new Date().toISOString(); save(); } });
 $('#g_obsTags').addEventListener('click', e=>{
   const b=e.target.closest('button[data-obs]'); if(!b) return;
   const c=cam(); if(!c) return;
@@ -811,16 +862,14 @@ function pintaPack(){
     <div class="hitos">
       ${hito('llegada','Llegada del camión','',true)}
       ${hito('packingFin','Packing terminado')}
-      ${hito('tunelIn','Entrada al túnel','frio')}
-      ${hito('tunelOut','Salida del túnel','frio')}
+      ${hito('tunel','Pasado por túnel','frio')}
       ${hito('expedido','Expedido')}
     </div>
     ${sig ? `<div class="actions"><button class="btn pri grande" data-do="${sig.k}">${sig.txt}</button></div>` : ''}
     <div class="row" style="margin-top:14px">
       <div style="flex:1 1 240px"><label>Corregir una hora a mano</label><select id="pk_hk">
         <option value="llegada">Llegada</option><option value="packingFin">Packing terminado</option>
-        <option value="tunelIn">Entrada al túnel</option><option value="tunelOut">Salida del túnel</option>
-        <option value="expedido">Expedido</option>
+        <option value="tunel">Pasado por túnel</option><option value="expedido">Expedido</option>
       </select></div>
       <div style="flex:1 1 220px"><label>Fecha y hora</label><input id="pk_hv" type="datetime-local"></div>
       <div style="flex:0 1 140px;display:flex;align-items:flex-end"><button class="btn gh" id="pk_hset" style="width:100%">Guardar hora</button></div>
@@ -879,10 +928,10 @@ $('#v-pack').addEventListener('click', e=>{
 
 /* ================= hojas del Excel ================= */
 const CAB_PACK = ['Camión','Fecha','Nº bulto','Código bulto','Mocacota','Uds','Uds leídas','Corregido por',
-                  'Operario','Anomalía','Observaciones','Hora','Túnel entrada','Túnel salida','Expedido'];
+                  'Operario','Anomalía','Observaciones','Hora','Túnel','Expedido'];
 const CAB_ART  = ['Mocacota','Uds por bulto','Nº de bultos','Uds totales'];
 const CAB_CAM  = ['Camión','Fecha','Estado','Bultos','Total uds','Artículos','Operario',
-                  'Llegada','Packing terminado','Túnel entrada','Túnel salida','Expedido','Observaciones'];
+                  'Llegada','Packing terminado','Túnel','Expedido','Observaciones'];
 
 function filasPack(cs){
   const F=[];
@@ -893,7 +942,7 @@ function filasPack(cs){
               x.uOrig!==undefined ? x.uOrig : '', x.man ? (x.manQuien||'sí') : '',
               c.operario||'', x.anom||'', c.obs||'',
               x.t ? new Date(x.t).toLocaleString('es-ES') : '',
-              fmtTs(h.tunelIn)||'NO', fmtTs(h.tunelOut)||'NO', fmtTs(h.expedido)||'NO']);
+              fmtTs(h.tunel)||'NO', fmtTs(h.expedido)||'NO']);
     });
   });
   return F;
@@ -914,7 +963,7 @@ function filasCam(cs){
   return cs.map(c=>{
     const h=c.h||{};
     return [c.codigo, fmtFecha(c.fecha), ETAPAS[etapa(c)].n, nBultos(c), totalUds(c), nArts(c), c.operario||'',
-            fmtTs(h.llegada), fmtTs(h.packingFin)||'NO', fmtTs(h.tunelIn)||'NO', fmtTs(h.tunelOut)||'NO',
+            fmtTs(h.llegada), fmtTs(h.packingFin)||'NO', fmtTs(h.tunel)||'NO',
             fmtTs(h.expedido)||'NO', c.obs||''];
   });
 }
@@ -982,6 +1031,213 @@ $('#dl_borrar').addEventListener('click', ()=>{
   S.cams=[]; S.sel=null; save(); render(); toast('Todo borrado','ok');
 });
 
+/* ================= sincronización con GitHub =================
+   Guarda una copia de los datos en el propio repositorio donde está
+   publicada la app. Cada PDA guarda su configuración (usuario, repo, rama,
+   token) sólo en su dispositivo; el token nunca viaja dentro del JSON. */
+let SY_CFG = {owner:'', repo:'', branch:'main', token:''};
+const SY_PATH = 'sync/packing.json';
+let SY_SHA = null;
+
+function syCargaCfg(){
+  try{ const d = JSON.parse(localStorage.getItem('pk_sync')||'null');
+       if(d) SY_CFG = {owner:d.owner||'', repo:d.repo||'', branch:d.branch||'main', token:d.token||''};
+  }catch(e){}
+  $('#sy_owner').value = SY_CFG.owner;
+  $('#sy_repo').value  = SY_CFG.repo;
+  $('#sy_branch').value= SY_CFG.branch;
+  $('#sy_token').value = SY_CFG.token;
+  $('#sy_info').textContent = (SY_CFG.owner && SY_CFG.repo)
+    ? `Conectado a ${SY_CFG.owner}/${SY_CFG.repo} (${SY_CFG.branch}).`
+    : 'Sin configurar todavía.';
+}
+$('#sy_savecfg').addEventListener('click', ()=>{
+  SY_CFG = {
+    owner: $('#sy_owner').value.trim(),
+    repo:  $('#sy_repo').value.trim(),
+    branch:$('#sy_branch').value.trim() || 'main',
+    token: $('#sy_token').value.trim()
+  };
+  if(!SY_CFG.owner || !SY_CFG.repo) return toast('Indica usuario y repositorio','ko');
+  localStorage.setItem('pk_sync', JSON.stringify(SY_CFG));
+  SY_SHA = null;
+  $('#sy_info').textContent = `Conectado a ${SY_CFG.owner}/${SY_CFG.repo} (${SY_CFG.branch}).`;
+  toast('Datos de conexión guardados','ok');
+});
+
+/* Con mala cobertura fetch() puede quedarse esperando para siempre y la barra
+   de arriba se quedaría clavada. A los 20 s se cancela y se avisa. */
+async function fetchConLimite(url, opts, ms=20000){
+  const ctrl = new AbortController();
+  const aviso = setTimeout(()=>ctrl.abort(), ms);
+  try{ return await fetch(url, {...opts, signal: ctrl.signal}); }
+  catch(err){
+    if(err.name==='AbortError') throw new Error('Sin respuesta tras '+(ms/1000)+' s (mala cobertura). Prueba de nuevo.');
+    throw new Error('Sin conexión con GitHub. Comprueba la cobertura.');
+  }finally{ clearTimeout(aviso); }
+}
+const kb = n => (n/1024).toFixed(0)+' KB';
+const syApi = p => `https://api.github.com/repos/${SY_CFG.owner}/${SY_CFG.repo}/contents/${p}`;
+
+/* Sólo el identificador del archivo, sin bajarlo: se pide el listado de la
+   carpeta, que pesa unos cientos de bytes. */
+async function syShaRemoto(){
+  const dir = SY_PATH.split('/').slice(0,-1).join('/');
+  const nombre = SY_PATH.split('/').pop();
+  const r = await fetchConLimite(`${syApi(dir)}?ref=${encodeURIComponent(SY_CFG.branch)}`,
+    {headers:{'Authorization':`Bearer ${SY_CFG.token}`,'Accept':'application/vnd.github+json'}});
+  if(r.status===404) return null;
+  if(!r.ok) throw new Error('No se pudo consultar la nube ('+r.status+')');
+  const lista = await r.json();
+  const f = Array.isArray(lista) ? lista.find(x=>x.name===nombre) : null;
+  return f ? f.sha : null;
+}
+/* Comprime antes de subir: el JSON baja alrededor del 90%. Si el navegador es
+   antiguo y no sabe comprimir, se sube en plano. */
+async function gzipB64(texto){
+  if(typeof CompressionStream==='undefined')
+    return {b64: btoa(unescape(encodeURIComponent(texto))), comprimido:false};
+  const flujo = new Blob([texto]).stream().pipeThrough(new CompressionStream('gzip'));
+  const buf = new Uint8Array(await new Response(flujo).arrayBuffer());
+  let s='', paso=0x8000;
+  for(let i=0;i<buf.length;i+=paso) s += String.fromCharCode.apply(null, buf.subarray(i, i+paso));
+  return {b64: btoa(s), comprimido:true};
+}
+async function textoDeRespuesta(r){
+  const buf = new Uint8Array(await r.arrayBuffer());
+  if(buf.length>2 && buf[0]===0x1f && buf[1]===0x8b){
+    if(typeof DecompressionStream==='undefined') throw new Error('Este navegador no puede descomprimir. Actualiza Chrome.');
+    const st = new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'));
+    return await new Response(st).text();
+  }
+  return new TextDecoder('utf-8').decode(buf);
+}
+async function syFetchRemoto(){
+  const r = await fetchConLimite(`${syApi(SY_PATH)}?ref=${encodeURIComponent(SY_CFG.branch)}`,
+    {headers:{'Authorization':`Bearer ${SY_CFG.token}`,'Accept':'application/vnd.github.raw'}});
+  if(r.status===404){ SY_SHA=null; return {datos:null}; }
+  if(!r.ok) throw new Error('No se pudo leer la nube ('+r.status+')');
+  const texto = await textoDeRespuesta(r);
+  try{ return {datos: JSON.parse(texto)}; }
+  catch(e){ throw new Error('El archivo de la nube no es válido'); }
+}
+
+/* ---- fusión ----
+   Los bultos se suman: nunca se pierde una lectura de ninguna PDA. Los hitos
+   y el resto de campos los pone la copia modificada más recientemente. Los
+   camiones se emparejan por código y fecha, así que da igual que dos PDAs
+   hayan dado de alta el mismo camión por su cuenta. */
+const syClaveCam  = c => (c.codigo||'').toUpperCase()+'|'+(c.fecha||'');
+const syClaveScan = x => x.c+'|'+x.u+'|'+(x.t||'');
+function syMergeCam(loc, rem){
+  if(!loc) return rem;
+  if(!rem) return loc;
+  const vistos = new Set((loc.scans||[]).map(syClaveScan));
+  const scans = [...(loc.scans||[])];
+  (rem.scans||[]).forEach(x=>{ const k=syClaveScan(x); if(!vistos.has(k)){ vistos.add(k); scans.push(x); } });
+  scans.sort((a,b)=> (a.t||'').localeCompare(b.t||''));
+
+  const base = (loc.ts||'') >= (rem.ts||'') ? loc : rem;
+  const otro = base===loc ? rem : loc;
+  const out = {...base, id: loc.id, scans,
+               h:      {...(otro.h||{}),      ...(base.h||{})},
+               hQuien: {...(otro.hQuien||{}), ...(base.hQuien||{})}};
+  ['obs','operario'].forEach(k=>{
+    if(!(out[k]||'').trim()) out[k] = (loc[k]||'').trim() || (rem[k]||'').trim() || '';
+  });
+  if(!out.patron) out.patron = loc.patron || rem.patron || null;
+  return out;
+}
+function syMergeCams(locales, remotos){
+  const porClave = new Map(locales.map(c=>[syClaveCam(c), c]));
+  (remotos||[]).forEach(rc=>{
+    const k = syClaveCam(rc);
+    porClave.set(k, syMergeCam(porClave.get(k), rc));
+  });
+  return [...porClave.values()].sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+}
+
+/* ---- barra de arriba ---- */
+function pintaNube(estado, clase){
+  const e = $('#nb_est'); if(!e) return;
+  if(estado!==undefined){ e.innerHTML=estado; e.className='nb_est '+(clase||''); return; }
+  const bul = S.cams.reduce((a,c)=>a+nBultos(c),0);
+  const exp = S.cams.filter(c=>etapa(c)===ETAPAS.length-1).length;
+  const base = `<b>${S.cams.length}</b> camiones · <b>${miles(bul)}</b> bultos · <b>${exp}</b> expedidos`;
+  const ultima = S.cfg.ultimaNube ? new Date(S.cfg.ultimaNube) : null;
+  if(SIN_SUBIR){ e.innerHTML = base+' · sin subir'; e.className='nb_est pend'; }
+  else if(ultima){ e.innerHTML = base+' · al día ('+ultima.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})+')'; e.className='nb_est'; }
+  else { e.innerHTML = base+' · nunca subido'; e.className='nb_est pend'; }
+}
+function nubeOcupada(v){ $('#nb_push').disabled=v; $('#nb_pull').disabled=v; }
+/* La barra no repite código: dispara los mismos botones de la pestaña Datos. */
+$('#nb_push').addEventListener('click', ()=> $('#sy_push').click());
+$('#nb_pull').addEventListener('click', ()=> $('#sy_pull').click());
+
+$('#sy_push').addEventListener('click', async ()=>{
+  if(!SY_CFG.owner || !SY_CFG.repo || !SY_CFG.token) return toast('Rellena y guarda antes la conexión','ko');
+  const t0=Date.now();
+  nubeOcupada(true); pintaNube('Subiendo…','pend');
+  $('#sy_info').textContent = 'Subiendo…';
+  try{
+    const cuerpo = JSON.stringify({v:1, cfg:{len:S.cfg.len, pos:S.cfg.pos, moca:S.cfg.moca}, cams:S.cams});
+    const {b64, comprimido} = await gzipB64(cuerpo);
+    pintaNube(`Subiendo ${kb(b64.length)}…`,'pend');
+
+    if(SY_SHA===null) SY_SHA = await syShaRemoto();
+    const enviar = sha => fetchConLimite(syApi(SY_PATH), {
+      method:'PUT',
+      headers:{'Authorization':`Bearer ${SY_CFG.token}`,'Accept':'application/vnd.github+json','Content-Type':'application/json'},
+      body: JSON.stringify({message:'Packing list '+new Date().toISOString(), content:b64, branch:SY_CFG.branch, sha:sha||undefined})
+    });
+    let r = await enviar(SY_SHA);
+    if(r.status===409 || r.status===422){        // otra PDA subió entretanto
+      SY_SHA = await syShaRemoto();
+      r = await enviar(SY_SHA);
+    }
+    if(!r.ok) throw new Error('GitHub rechazó la subida ('+r.status+')');
+    const j = await r.json().catch(()=>null);
+    SY_SHA = (j && j.content && j.content.sha) || null;
+
+    const bul = S.cams.reduce((a,c)=>a+nBultos(c),0);
+    const seg = ((Date.now()-t0)/1000).toFixed(1);
+    $('#sy_info').innerHTML = `Subido en ${seg} s · ${new Date().toLocaleString('es-ES')}<br>`+
+      `<b>${S.cams.length} camiones · ${miles(bul)} bultos</b> · ${kb(b64.length)}`+(comprimido?' comprimido':' sin comprimir');
+    S.cfg.ultimaNube = new Date().toISOString();
+    save(); SIN_SUBIR = false; pintaNube();
+    toast(`Subido en ${seg} s`,'ok');
+  }catch(err){
+    $('#sy_info').textContent = 'Error al subir: '+err.message;
+    pintaNube('No se pudo subir','malo'); toast('No se pudo subir','ko');
+  }finally{ nubeOcupada(false); }
+});
+
+$('#sy_pull').addEventListener('click', async ()=>{
+  if(!SY_CFG.owner || !SY_CFG.repo || !SY_CFG.token) return toast('Rellena y guarda antes la conexión','ko');
+  const t0=Date.now();
+  nubeOcupada(true); pintaNube('Trayendo…','pend');
+  $('#sy_info').textContent = 'Trayendo…';
+  try{
+    const {datos} = await syFetchRemoto();
+    if(!datos){ $('#sy_info').textContent = 'Todavía no hay nada subido a la nube.'; pintaNube(); return; }
+    const antesC = S.cams.length, antesB = S.cams.reduce((a,c)=>a+nBultos(c),0);
+    migra(datos.cams||[]);
+    S.cams = syMergeCams(S.cams, datos.cams||[]);
+    if(!S.sel && S.cams.length) S.sel = S.cams[0].id;
+    if(!S.cams.some(c=>c.id===S.sel)) S.sel = S.cams.length ? S.cams[0].id : null;
+    save(); render();
+    const ahoraC = S.cams.length, ahoraB = S.cams.reduce((a,c)=>a+nBultos(c),0);
+    const seg = ((Date.now()-t0)/1000).toFixed(1);
+    $('#sy_info').innerHTML = `Traído en ${seg} s · ${new Date().toLocaleString('es-ES')}<br>`+
+      `Camiones: ${antesC} → <b>${ahoraC}</b> · bultos: ${miles(antesB)} → <b>${miles(ahoraB)}</b>`;
+    S.cfg.ultimaNube = new Date().toISOString(); save(); pintaNube();
+    toast(`Traído en ${seg} s · ${ahoraB-antesB} bultos nuevos`,'ok');
+  }catch(err){
+    $('#sy_info').textContent = 'Error al traer: '+err.message;
+    pintaNube('No se pudo traer','malo'); toast('No se pudo traer','ko');
+  }finally{ nubeOcupada(false); }
+});
+
 /* ============ generador XLSX (ZIP sin comprimir + CRC32) ============ */
 const CRCT=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
 const crc32=b=>{let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CRCT[(c^b[i])&0xFF]^(c>>>8);return (c^0xFFFFFFFF)>>>0;};
@@ -1046,7 +1302,10 @@ load();
 if(!S.sel && S.cams.length) S.sel = S.cams[0].id;
 $('#nc_fec').value = new Date().toISOString().slice(0,10);
 $('#cf_test').value = '84178016200200287';
+syCargaCfg();
 render();
+SIN_SUBIR = false;
+pintaNube();
 setInterval(()=>{ if(!$('#v-tab').classList.contains('hide')) pintaTablero(); }, 60000);
 
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});

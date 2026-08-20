@@ -2,7 +2,8 @@
 
 Un camión llega, se le hace el packing, pasa por el túnel y se expide.
 La app registra cada uno de esos pasos con su hora y enseña en todo momento
-dónde está cada camión.
+dónde está cada camión. Desde la barra de arriba se suben y se traen los datos
+de las demás PDAs.
 
 Es un solo archivo sin dependencias. Funciona sin cobertura y los datos se
 quedan en el dispositivo.
@@ -17,6 +18,8 @@ quedan en el dispositivo.
 | `icon.svg` | El icono |
 | `.nojekyll` | Evita que GitHub Pages procese los archivos |
 | `.gitattributes` | Fuerza finales de línea consistentes |
+
+La app creará sola la carpeta `sync/` la primera vez que subas datos.
 
 ---
 
@@ -57,7 +60,45 @@ quedan en el dispositivo.
 3. Queda como una aplicación normal, a pantalla completa y sin barra del
    navegador. Ya funciona aunque la PDA se quede sin cobertura.
 
-### 5 · Publicar cambios más adelante
+### 5 · Encender la sincronización entre PDAs
+
+Los datos se guardan en cada dispositivo. Para que las PDAs compartan lo que
+lleva cada una, la app usa **tu propio repositorio** como almacén, en un archivo
+`sync/packing.json`. No hace falta contratar ningún servidor.
+
+**Crear el token, una sola vez:**
+
+1. En GitHub, arriba a la derecha, tu foto → **Settings**.
+2. Abajo del todo del menú izquierdo, **Developer settings**.
+3. **Personal access tokens → Fine-grained tokens** → botón
+   **Generate new token**.
+4. Ponle un nombre (`packing`), una caducidad larga, y en *Repository access*
+   elige **Only select repositories** y marca `packing-list`.
+5. En *Permissions → Repository permissions*, busca **Contents** y ponlo en
+   **Read and write**.
+6. **Generate token** y **copia el código que sale**. Sólo se enseña una vez.
+
+**En cada PDA, una sola vez:**
+
+1. Pestaña **Datos → Sincronización online**.
+2. Rellena usuario, repositorio, rama (`main`) y pega el token.
+3. **Guardar estos datos de conexión**. El token se queda sólo en esa PDA y
+   nunca viaja dentro de los datos que se suben.
+
+**En el día a día**, con los dos botones de la barra de arriba:
+
+- **Subir a la nube** cuando termines de escanear o marques un hito.
+- **Traer de la nube** cuando quieras ver lo que han hecho las demás.
+
+No es en tiempo real y hace falta cobertura. Al traer, **nunca se pierde nada**:
+los bultos de las dos PDAs se suman, los camiones se emparejan por código y
+fecha (aunque cada PDA lo haya dado de alta por su cuenta) y de los hitos se
+queda el de la copia modificada más recientemente. Traer dos veces no duplica.
+
+La barra de arriba avisa: pone *sin subir* en ámbar mientras tengas cambios sin
+mandar, y *al día* con la hora cuando ya está todo arriba.
+
+### 6 · Publicar cambios más adelante
 
 1. En el repositorio, entra en `sw.js` y pulsa el lápiz para editarlo.
 2. Cambia `packing-v1` por `packing-v2` (y así sucesivamente). **Este paso es
@@ -104,9 +145,9 @@ packing list.
 
 ### Packing list
 
-Arriba, el estado del camión con las cinco marcas de tiempo: llegada, packing
-terminado, entrada al túnel, salida del túnel y expedición. Cada una guarda la
-hora y quién la puso. Si alguien marcó tarde, se corrige la hora a mano con el
+Arriba, el estado del camión con sus cuatro marcas de tiempo: llegada, packing
+terminado, pasado por túnel y expedición. Cada una guarda la hora y quién la
+puso. Si alguien marcó tarde, se corrige la hora a mano con el
 selector de abajo, y queda anotado como *(a mano)*.
 
 **Deshacer** un hito borra también los posteriores, para que no quede un camión
@@ -134,8 +175,8 @@ Tres hojas:
 
 1. **Packing list** — una línea por bulto: camión, fecha, nº de bulto, código,
    mocacota, unidades, unidades leídas antes de corregir, quién corrigió,
-   operario, anomalía, observaciones, hora, y las tres marcas de túnel y
-   expedición repetidas en cada línea para poder filtrar.
+   operario, anomalía, observaciones, hora, y las marcas de túnel y expedición
+   repetidas en cada línea para poder filtrar.
 2. **Resumen por artículo** — cuántos bultos hay de cada artículo y tamaño, y
    cuántas unidades suman.
 3. **Camiones** — una línea por camión con su estado y todas sus horas.
@@ -146,8 +187,6 @@ Los códigos van como texto, así que Excel no se come los ceros de delante.
 
 Los datos viven en el almacenamiento del navegador de **cada dispositivo**:
 
-- **No se sincronizan entre PDAs.** Si dos operarios descargan el mismo camión
-  desde PDAs distintas, tendrás dos registros parciales.
 - **Se pierden si se borran los datos de navegación** o se desinstala la app.
 - **El espacio es limitado** (unos 5 MB). En la pestaña Datos ves cuánto llevas
   ocupado.
@@ -155,3 +194,6 @@ Los datos viven en el almacenamiento del navegador de **cada dispositivo**:
 Por eso: **descarga el respaldo JSON al cerrar cada jornada**, y guarda también
 el Excel. El JSON se puede restaurar en cualquier PDA, y al restaurar no pisa
 lo que ya había: sólo añade los camiones que faltan.
+
+Para que varias PDAs compartan lo mismo, usa la sincronización de la barra de
+arriba, explicada en el paso 5.
