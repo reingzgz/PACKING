@@ -1,0 +1,12 @@
+{
+  "name": "Packing list de camiones",
+  "short_name": "Packing",
+  "description": "Packing list por camión con seguimiento de túnel y expedición",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#eef1ef",
+  "theme_color": "#14181c",
+  "lang": "es",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
