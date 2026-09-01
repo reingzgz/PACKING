@@ -1103,7 +1103,7 @@ $('#dl_borrar').addEventListener('click', ()=>{
 });
 
 /* ================= versión y actualización ================= */
-const VERSION = 'v7';
+const VERSION = 'v8';
 $('#vr_num').textContent = VERSION;
 $('#vr_chip').textContent = VERSION;
 $('#vr_check').addEventListener('click', async ()=>{
@@ -1141,7 +1141,12 @@ const FB_CONFIG = {
   messagingSenderId: "602450625490",
   appId: "1:602450625490:web:43b3b15a0d2520fa32be0b"
 };
+console.log('[fb] typeof firebase =', typeof firebase);
+if(typeof firebase === 'undefined'){
+  $('#sy_info').textContent = 'No se pudo cargar Firebase (revisa la conexión o un bloqueador de anuncios).';
+}
 firebase.initializeApp(FB_CONFIG);
+console.log('[fb] initializeApp ok, proyecto:', FB_CONFIG.projectId);
 const fbAuth = firebase.auth();
 const fbDb   = firebase.firestore();
 const SY_DOC = fbDb.collection('sync').doc('packing');
@@ -1149,11 +1154,15 @@ let SY_LISTO = false;
 
 const fbListo = new Promise(res=>{
   fbAuth.onAuthStateChanged(u=>{
+    console.log('[fb] onAuthStateChanged, usuario:', u ? u.uid : null);
     if(u){ SY_LISTO = true; $('#sy_info').textContent = 'Conectado.'; res(); }
   });
-  fbAuth.signInAnonymously().catch(err=>{
-    $('#sy_info').textContent = 'Error de conexión: '+err.message;
-  });
+  fbAuth.signInAnonymously()
+    .then(()=> console.log('[fb] signInAnonymously OK'))
+    .catch(err=>{
+      console.error('[fb] signInAnonymously ERROR', err.code, err.message);
+      $('#sy_info').textContent = 'Error de conexión: '+err.message;
+    });
 });
 
 /* Si tarda demasiado (sin cobertura, por ejemplo), se avisa a los 20 s en
@@ -1275,6 +1284,7 @@ $('#sy_push').addEventListener('click', async ()=>{
     save(); SIN_SUBIR = false; pintaNube();
     toast(`Subido en ${seg} s`,'ok');
   }catch(err){
+    console.error('[fb] error al subir', err.code, err.message, err);
     $('#sy_info').textContent = 'Error al subir: '+err.message;
     pintaNube('No se pudo subir','malo'); toast('No se pudo subir','ko');
   }finally{ nubeOcupada(false); }
