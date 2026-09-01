@@ -1103,7 +1103,7 @@ $('#dl_borrar').addEventListener('click', ()=>{
 });
 
 /* ================= versión y actualización ================= */
-const VERSION = 'v8';
+const VERSION = 'v9';
 $('#vr_num').textContent = VERSION;
 $('#vr_chip').textContent = VERSION;
 $('#vr_check').addEventListener('click', async ()=>{
@@ -1149,6 +1149,8 @@ firebase.initializeApp(FB_CONFIG);
 console.log('[fb] initializeApp ok, proyecto:', FB_CONFIG.projectId);
 const fbAuth = firebase.auth();
 const fbDb   = firebase.firestore();
+fbDb.settings({ experimentalAutoDetectLongPolling: true, useFetchStreams: false });
+console.log('[fb] firestore settings aplicados (long-polling)');
 const SY_DOC = fbDb.collection('sync').doc('packing');
 let SY_LISTO = false;
 
