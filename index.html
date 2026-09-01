@@ -423,7 +423,6 @@ details.guia code{background:#e9edeb;padding:1px 5px;border-radius:4px;font-fami
 
 <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore-compat.js"></script>
 <script>
 'use strict';
 const $ = s => document.querySelector(s);
@@ -1103,7 +1102,7 @@ $('#dl_borrar').addEventListener('click', ()=>{
 });
 
 /* ================= versión y actualización ================= */
-const VERSION = 'v9';
+const VERSION = 'v10';
 $('#vr_num').textContent = VERSION;
 $('#vr_chip').textContent = VERSION;
 $('#vr_check').addEventListener('click', async ()=>{
@@ -1148,16 +1147,17 @@ if(typeof firebase === 'undefined'){
 firebase.initializeApp(FB_CONFIG);
 console.log('[fb] initializeApp ok, proyecto:', FB_CONFIG.projectId);
 const fbAuth = firebase.auth();
-const fbDb   = firebase.firestore();
-fbDb.settings({ experimentalAutoDetectLongPolling: true, useFetchStreams: false });
-console.log('[fb] firestore settings aplicados (long-polling)');
-const SY_DOC = fbDb.collection('sync').doc('packing');
-let SY_LISTO = false;
+/* Firestore se usa por su API REST normal (peticiones HTTPS sueltas), no por
+   el SDK con conexión de streaming: algunas redes con proxy o antivirus
+   corporativo cortan ese canal y la escritura no llega nunca a confirmarse
+   aunque los datos sí lleguen. Con peticiones sueltas, igual que ya se hacía
+   con GitHub, no hay ese problema. */
+const FS_DOC_URL = `https://firestore.googleapis.com/v1/projects/${FB_CONFIG.projectId}/databases/(default)/documents/sync/packing`;
 
 const fbListo = new Promise(res=>{
   fbAuth.onAuthStateChanged(u=>{
     console.log('[fb] onAuthStateChanged, usuario:', u ? u.uid : null);
-    if(u){ SY_LISTO = true; $('#sy_info').textContent = 'Conectado.'; res(); }
+    if(u){ $('#sy_info').textContent = 'Conectado.'; res(); }
   });
   fbAuth.signInAnonymously()
     .then(()=> console.log('[fb] signInAnonymously OK'))
@@ -1166,14 +1166,21 @@ const fbListo = new Promise(res=>{
       $('#sy_info').textContent = 'Error de conexión: '+err.message;
     });
 });
+async function fbIdToken(){
+  if(!fbAuth.currentUser) await fbListo;
+  return fbAuth.currentUser.getIdToken();
+}
 
-/* Si tarda demasiado (sin cobertura, por ejemplo), se avisa a los 20 s en
-   vez de dejar la barra de arriba clavada para siempre. */
-function conLimite(promesa, ms=20000){
-  return Promise.race([
-    promesa,
-    new Promise((_,rej)=>setTimeout(()=>rej(new Error('Sin respuesta tras '+(ms/1000)+' s (mala cobertura). Prueba de nuevo.')), ms))
-  ]);
+/* Con mala cobertura fetch() puede quedarse esperando para siempre y la barra
+   de arriba se quedaría clavada. A los 20 s se cancela y se avisa. */
+async function fetchConLimite(url, opts, ms=20000){
+  const ctrl = new AbortController();
+  const aviso = setTimeout(()=>ctrl.abort(), ms);
+  try{ return await fetch(url, {...opts, signal: ctrl.signal}); }
+  catch(err){
+    if(err.name==='AbortError') throw new Error('Sin respuesta tras '+(ms/1000)+' s (mala cobertura). Prueba de nuevo.');
+    throw new Error('Sin conexión con la nube. Comprueba la cobertura.');
+  }finally{ clearTimeout(aviso); }
 }
 const kb = n => (n/1024).toFixed(0)+' KB';
 
@@ -1198,11 +1205,14 @@ async function ungzipB64(b64, comprimido){
   return await new Response(st).text();
 }
 async function syFetchRemoto(){
-  const snap = await conLimite(SY_DOC.get());
-  if(!snap.exists) return {datos:null};
-  const d = snap.data();
-  if(!d || !d.data) return {datos:null};
-  const texto = await ungzipB64(d.data, !!d.comprimido);
+  const token = await fbIdToken();
+  const r = await fetchConLimite(FS_DOC_URL, {headers:{'Authorization':`Bearer ${token}`}});
+  if(r.status===404) return {datos:null};
+  if(!r.ok) throw new Error('No se pudo leer la nube ('+r.status+')');
+  const j = await r.json();
+  const f = j.fields||{};
+  if(!f.data || !f.data.stringValue) return {datos:null};
+  const texto = await ungzipB64(f.data.stringValue, !!(f.comprimido && f.comprimido.booleanValue));
   try{ return {datos: JSON.parse(texto)}; }
   catch(e){ throw new Error('Los datos de la nube no son válidos'); }
 }
@@ -1276,7 +1286,20 @@ $('#sy_push').addEventListener('click', async ()=>{
     const {b64, comprimido} = await gzipB64(cuerpo);
     pintaNube(`Subiendo ${kb(b64.length)}…`,'pend');
 
-    await conLimite(SY_DOC.set({v:1, data:b64, comprimido, updatedAt: new Date().toISOString()}));
+    const token = await fbIdToken();
+    const ahoraIso = new Date().toISOString();
+    const mask = ['v','data','comprimido','updatedAt'].map(c=>`updateMask.fieldPaths=${c}`).join('&');
+    const r = await fetchConLimite(`${FS_DOC_URL}?${mask}`, {
+      method:'PATCH',
+      headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+      body: JSON.stringify({fields:{
+        v:{integerValue:'1'},
+        data:{stringValue:b64},
+        comprimido:{booleanValue:!!comprimido},
+        updatedAt:{stringValue:ahoraIso}
+      }})
+    });
+    if(!r.ok) throw new Error('La nube rechazó la subida ('+r.status+')');
 
     const bul = S.cams.reduce((a,c)=>a+nBultos(c),0);
     const seg = ((Date.now()-t0)/1000).toFixed(1);
