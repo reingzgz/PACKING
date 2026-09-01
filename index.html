@@ -394,32 +394,9 @@ details.guia code{background:#e9edeb;padding:1px 5px;border-radius:4px;font-fami
 
   <div class="card">
     <h2>Sincronización online</h2>
-    <p class="hint">Guarda una copia de los datos de este dispositivo en el propio repositorio de GitHub donde está publicada la app, en un archivo <code>sync/packing.json</code>, para poder traerla a otra PDA. No hace falta ningún servidor. Cada PDA decide cuándo subir y cuándo traer: no es automático ni en tiempo real.</p>
-    <div class="row">
-      <div><label>Usuario/organización</label><input id="sy_owner" class="mono" placeholder="TU-USUARIO" autocomplete="off"></div>
-      <div><label>Repositorio</label><input id="sy_repo" class="mono" placeholder="TU-REPO" autocomplete="off"></div>
-      <div><label>Rama</label><input id="sy_branch" class="mono" placeholder="main" autocomplete="off"></div>
-    </div>
-    <div class="row" style="margin-top:8px">
-      <div style="flex:1 1 100%"><label>Token de GitHub (permiso de lectura y escritura de contenidos)</label><input id="sy_token" class="mono" type="password" placeholder="github_pat_…" autocomplete="off"></div>
-    </div>
-    <p class="hint" style="margin-top:6px">El token es la contraseña que permite a la app escribir en tu repositorio. Se guarda sólo en este dispositivo y nunca viaja dentro de los datos que se suben.</p>
-    <details class="guia">
-      <summary>De dónde saco el token — paso a paso</summary>
-      <ol>
-        <li>Entra en <code>github.com</code> con tu cuenta, en un ordenador.</li>
-        <li>Arriba a la derecha, pulsa tu foto → <b>Settings</b>.</li>
-        <li>Baja del todo en el menú de la izquierda → <b>Developer settings</b>.</li>
-        <li><b>Personal access tokens</b> → <b>Fine-grained tokens</b> → botón <b>Generate new token</b>.</li>
-        <li>Nombre: <code>packing</code>. Caducidad (<i>Expiration</i>): la más larga que te deje, o <i>No expiration</i>.</li>
-        <li>En <i>Repository access</i> marca <b>Only select repositories</b> y elige el repositorio donde está publicada esta app.</li>
-        <li>En <i>Permissions → Repository permissions</i>, busca <b>Contents</b> y ponlo en <b>Read and write</b>.</li>
-        <li>Abajo, <b>Generate token</b>. Sale un código largo que empieza por <code>github_pat_</code>: <b>cópialo ahora</b>, porque GitHub no vuelve a enseñarlo.</li>
-        <li>Pégalo aquí arriba y pulsa «Guardar estos datos de conexión». Repítelo en cada PDA.</li>
-      </ol>
-    </details>
+    <p class="hint">Guarda una copia de los datos de este dispositivo en la nube (Firebase), para poder traerla a otra PDA. No hace falta ningún servidor propio ni usuario ni contraseña: cada PDA se conecta sola. Cada PDA decide cuándo subir y cuándo traer: no es automático ni en tiempo real.</p>
+    <p class="hint" id="sy_info">Conectando…</p>
     <div class="actions">
-      <button class="btn gh" id="sy_savecfg">Guardar estos datos de conexión</button>
       <button class="btn pri" id="sy_push">Subir mis datos a la nube</button>
       <button class="btn gh" id="sy_pull">Traer datos de la nube</button>
     </div>
@@ -445,6 +422,9 @@ details.guia code{background:#e9edeb;padding:1px 5px;border-radius:4px;font-fami
 </main>
 <div id="toast"></div>
 
+<script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore-compat.js"></script>
 <script>
 'use strict';
 const $ = s => document.querySelector(s);
@@ -1124,7 +1104,7 @@ $('#dl_borrar').addEventListener('click', ()=>{
 });
 
 /* ================= versión y actualización ================= */
-const VERSION = 'v5';
+const VERSION = 'v6';
 $('#vr_num').textContent = VERSION;
 $('#vr_chip').textContent = VERSION;
 $('#vr_check').addEventListener('click', async ()=>{
@@ -1147,67 +1127,46 @@ $('#vr_check').addEventListener('click', async ()=>{
   setTimeout(()=>location.reload(), 400);
 });
 
-/* ================= sincronización con GitHub =================
-   Guarda una copia de los datos en el propio repositorio donde está
-   publicada la app. Cada PDA guarda su configuración (usuario, repo, rama,
-   token) sólo en su dispositivo; el token nunca viaja dentro del JSON. */
-let SY_CFG = {owner:'', repo:'', branch:'main', token:''};
-const SY_PATH = 'sync/packing.json';
-let SY_SHA = null;
+/* ================= sincronización con Firebase Firestore =================
+   Guarda una copia de los datos en un único documento de Firestore
+   (colección "sync", documento "packing"). Cada PDA se identifica sola
+   mediante inicio de sesión anónimo: no hace falta usuario ni token.
+   El acceso está protegido por las reglas de seguridad del proyecto
+   (sólo usuarios autenticados, aunque sea de forma anónima, pueden leer
+   y escribir), así que los datos nunca son públicos. */
+const FB_CONFIG = {
+  apiKey: "AIzaSyAXca7QVomG5gIOO9j3ZbX7TaBLVKCLuD4",
+  authDomain: "packing-list-82a4b.firebaseapp.com",
+  projectId: "packing-list-82a4b",
+  storageBucket: "packing-list-82a4b.firebasestorage.app",
+  messagingSenderId: "602450625490",
+  appId: "1:602450625490:web:43b3b15a0d2520fa32be0b"
+};
+firebase.initializeApp(FB_CONFIG);
+const fbAuth = firebase.auth();
+const fbDb   = firebase.firestore();
+const SY_DOC = fbDb.collection('sync').doc('packing');
+let SY_LISTO = false;
 
-function syCargaCfg(){
-  try{ const d = JSON.parse(localStorage.getItem('pk_sync')||'null');
-       if(d) SY_CFG = {owner:d.owner||'', repo:d.repo||'', branch:d.branch||'main', token:d.token||''};
-  }catch(e){}
-  $('#sy_owner').value = SY_CFG.owner;
-  $('#sy_repo').value  = SY_CFG.repo;
-  $('#sy_branch').value= SY_CFG.branch;
-  $('#sy_token').value = SY_CFG.token;
-  $('#sy_info').textContent = (SY_CFG.owner && SY_CFG.repo)
-    ? `Conectado a ${SY_CFG.owner}/${SY_CFG.repo} (${SY_CFG.branch}).`
-    : 'Sin configurar todavía.';
-}
-$('#sy_savecfg').addEventListener('click', ()=>{
-  SY_CFG = {
-    owner: $('#sy_owner').value.trim(),
-    repo:  $('#sy_repo').value.trim(),
-    branch:$('#sy_branch').value.trim() || 'main',
-    token: $('#sy_token').value.trim()
-  };
-  if(!SY_CFG.owner || !SY_CFG.repo) return toast('Indica usuario y repositorio','ko');
-  localStorage.setItem('pk_sync', JSON.stringify(SY_CFG));
-  SY_SHA = null;
-  $('#sy_info').textContent = `Conectado a ${SY_CFG.owner}/${SY_CFG.repo} (${SY_CFG.branch}).`;
-  toast('Datos de conexión guardados','ok');
+const fbListo = new Promise(res=>{
+  fbAuth.onAuthStateChanged(u=>{
+    if(u){ SY_LISTO = true; $('#sy_info').textContent = 'Conectado.'; res(); }
+  });
+  fbAuth.signInAnonymously().catch(err=>{
+    $('#sy_info').textContent = 'Error de conexión: '+err.message;
+  });
 });
 
-/* Con mala cobertura fetch() puede quedarse esperando para siempre y la barra
-   de arriba se quedaría clavada. A los 20 s se cancela y se avisa. */
-async function fetchConLimite(url, opts, ms=20000){
-  const ctrl = new AbortController();
-  const aviso = setTimeout(()=>ctrl.abort(), ms);
-  try{ return await fetch(url, {...opts, signal: ctrl.signal}); }
-  catch(err){
-    if(err.name==='AbortError') throw new Error('Sin respuesta tras '+(ms/1000)+' s (mala cobertura). Prueba de nuevo.');
-    throw new Error('Sin conexión con GitHub. Comprueba la cobertura.');
-  }finally{ clearTimeout(aviso); }
+/* Si tarda demasiado (sin cobertura, por ejemplo), se avisa a los 20 s en
+   vez de dejar la barra de arriba clavada para siempre. */
+function conLimite(promesa, ms=20000){
+  return Promise.race([
+    promesa,
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error('Sin respuesta tras '+(ms/1000)+' s (mala cobertura). Prueba de nuevo.')), ms))
+  ]);
 }
 const kb = n => (n/1024).toFixed(0)+' KB';
-const syApi = p => `https://api.github.com/repos/${SY_CFG.owner}/${SY_CFG.repo}/contents/${p}`;
 
-/* Sólo el identificador del archivo, sin bajarlo: se pide el listado de la
-   carpeta, que pesa unos cientos de bytes. */
-async function syShaRemoto(){
-  const dir = SY_PATH.split('/').slice(0,-1).join('/');
-  const nombre = SY_PATH.split('/').pop();
-  const r = await fetchConLimite(`${syApi(dir)}?ref=${encodeURIComponent(SY_CFG.branch)}`,
-    {headers:{'Authorization':`Bearer ${SY_CFG.token}`,'Accept':'application/vnd.github+json'}});
-  if(r.status===404) return null;
-  if(!r.ok) throw new Error('No se pudo consultar la nube ('+r.status+')');
-  const lista = await r.json();
-  const f = Array.isArray(lista) ? lista.find(x=>x.name===nombre) : null;
-  return f ? f.sha : null;
-}
 /* Comprime antes de subir: el JSON baja alrededor del 90%. Si el navegador es
    antiguo y no sabe comprimir, se sube en plano. */
 async function gzipB64(texto){
@@ -1219,23 +1178,23 @@ async function gzipB64(texto){
   for(let i=0;i<buf.length;i+=paso) s += String.fromCharCode.apply(null, buf.subarray(i, i+paso));
   return {b64: btoa(s), comprimido:true};
 }
-async function textoDeRespuesta(r){
-  const buf = new Uint8Array(await r.arrayBuffer());
-  if(buf.length>2 && buf[0]===0x1f && buf[1]===0x8b){
-    if(typeof DecompressionStream==='undefined') throw new Error('Este navegador no puede descomprimir. Actualiza Chrome.');
-    const st = new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'));
-    return await new Response(st).text();
-  }
-  return new TextDecoder('utf-8').decode(buf);
+async function ungzipB64(b64, comprimido){
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+  if(!comprimido) return new TextDecoder('utf-8').decode(bytes);
+  if(typeof DecompressionStream==='undefined') throw new Error('Este navegador no puede descomprimir. Actualiza Chrome.');
+  const st = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+  return await new Response(st).text();
 }
 async function syFetchRemoto(){
-  const r = await fetchConLimite(`${syApi(SY_PATH)}?ref=${encodeURIComponent(SY_CFG.branch)}`,
-    {headers:{'Authorization':`Bearer ${SY_CFG.token}`,'Accept':'application/vnd.github.raw'}});
-  if(r.status===404){ SY_SHA=null; return {datos:null}; }
-  if(!r.ok) throw new Error('No se pudo leer la nube ('+r.status+')');
-  const texto = await textoDeRespuesta(r);
+  const snap = await conLimite(SY_DOC.get());
+  if(!snap.exists) return {datos:null};
+  const d = snap.data();
+  if(!d || !d.data) return {datos:null};
+  const texto = await ungzipB64(d.data, !!d.comprimido);
   try{ return {datos: JSON.parse(texto)}; }
-  catch(e){ throw new Error('El archivo de la nube no es válido'); }
+  catch(e){ throw new Error('Los datos de la nube no son válidos'); }
 }
 
 /* ---- fusión ----
@@ -1298,29 +1257,16 @@ $('#nb_push').addEventListener('click', ()=> $('#sy_push').click());
 $('#nb_pull').addEventListener('click', ()=> $('#sy_pull').click());
 
 $('#sy_push').addEventListener('click', async ()=>{
-  if(!SY_CFG.owner || !SY_CFG.repo || !SY_CFG.token) return toast('Rellena y guarda antes la conexión','ko');
   const t0=Date.now();
   nubeOcupada(true); pintaNube('Subiendo…','pend');
   $('#sy_info').textContent = 'Subiendo…';
   try{
+    await fbListo;
     const cuerpo = JSON.stringify({v:1, cfg:{len:S.cfg.len, pos:S.cfg.pos, moca:S.cfg.moca}, cams:S.cams});
     const {b64, comprimido} = await gzipB64(cuerpo);
     pintaNube(`Subiendo ${kb(b64.length)}…`,'pend');
 
-    if(SY_SHA===null) SY_SHA = await syShaRemoto();
-    const enviar = sha => fetchConLimite(syApi(SY_PATH), {
-      method:'PUT',
-      headers:{'Authorization':`Bearer ${SY_CFG.token}`,'Accept':'application/vnd.github+json','Content-Type':'application/json'},
-      body: JSON.stringify({message:'Packing list '+new Date().toISOString(), content:b64, branch:SY_CFG.branch, sha:sha||undefined})
-    });
-    let r = await enviar(SY_SHA);
-    if(r.status===409 || r.status===422){        // otra PDA subió entretanto
-      SY_SHA = await syShaRemoto();
-      r = await enviar(SY_SHA);
-    }
-    if(!r.ok) throw new Error('GitHub rechazó la subida ('+r.status+')');
-    const j = await r.json().catch(()=>null);
-    SY_SHA = (j && j.content && j.content.sha) || null;
+    await conLimite(SY_DOC.set({v:1, data:b64, comprimido, updatedAt: new Date().toISOString()}));
 
     const bul = S.cams.reduce((a,c)=>a+nBultos(c),0);
     const seg = ((Date.now()-t0)/1000).toFixed(1);
@@ -1336,8 +1282,8 @@ $('#sy_push').addEventListener('click', async ()=>{
 });
 
 $('#sy_pull').addEventListener('click', async ()=>{
-  if(!SY_CFG.owner || !SY_CFG.repo || !SY_CFG.token) return toast('Rellena y guarda antes la conexión','ko');
   const t0=Date.now();
+  try{ await fbListo; }catch(e){}
   nubeOcupada(true); pintaNube('Trayendo…','pend');
   $('#sy_info').textContent = 'Trayendo…';
   try{
@@ -1425,7 +1371,7 @@ load();
 if(!S.sel && S.cams.length) S.sel = S.cams[0].id;
 $('#nc_fec').value = new Date().toISOString().slice(0,10);
 $('#cf_test').value = '84178016200200287';
-syCargaCfg();
+
 render();
 SIN_SUBIR = false;
 pintaNube();
