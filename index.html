@@ -1102,7 +1102,7 @@ $('#dl_borrar').addEventListener('click', ()=>{
 });
 
 /* ================= versión y actualización ================= */
-const VERSION = 'v10';
+const VERSION = 'v11';
 $('#vr_num').textContent = VERSION;
 $('#vr_chip').textContent = VERSION;
 $('#vr_check').addEventListener('click', async ()=>{
@@ -1152,7 +1152,7 @@ const fbAuth = firebase.auth();
    corporativo cortan ese canal y la escritura no llega nunca a confirmarse
    aunque los datos sí lleguen. Con peticiones sueltas, igual que ya se hacía
    con GitHub, no hay ese problema. */
-const FS_DOC_URL = `https://firestore.googleapis.com/v1/projects/${FB_CONFIG.projectId}/databases/(default)/documents/sync/packing`;
+const FS_DOC_URL = `https://firestore.googleapis.com/v1/projects/${FB_CONFIG.projectId}/databases/default/documents/sync/packing`;
 
 const fbListo = new Promise(res=>{
   fbAuth.onAuthStateChanged(u=>{
