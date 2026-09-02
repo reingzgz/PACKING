@@ -384,7 +384,7 @@ details.guia code{background:#e9edeb;padding:1px 5px;border-radius:4px;font-fami
 
   <div class="card">
     <h2>Sincronización online</h2>
-    <p class="hint">Guarda una copia de los datos de este dispositivo en el propio repositorio de GitHub donde está publicada la app, en un archivo <code>sync/packing.json</code>, para poder traerla a otra PDA. No hace falta ningún servidor. Cada PDA decide cuándo subir y cuándo traer: no es automático ni en tiempo real.</p>
+    <p class="hint">Los datos operativos se guardan únicamente en <code>sync/packing.json</code> del repositorio privado. Esta web pública arranca vacía. Introduce la conexión privada y pulsa «Traer datos de la nube». Al subir o traer, los datos se fusionan para no perder información de otras PDAs.</p>
     <div class="row">
       <div><label>Usuario/organización</label><input id="sy_owner" class="mono" placeholder="TU-USUARIO" autocomplete="off"></div>
       <div><label>Repositorio</label><input id="sy_repo" class="mono" placeholder="TU-REPO" autocomplete="off"></div>
@@ -393,7 +393,7 @@ details.guia code{background:#e9edeb;padding:1px 5px;border-radius:4px;font-fami
     <div class="row" style="margin-top:8px">
       <div style="flex:1 1 100%"><label>Token de GitHub (permiso de lectura y escritura de contenidos)</label><input id="sy_token" class="mono" type="password" placeholder="github_pat_…" autocomplete="off"></div>
     </div>
-    <p class="hint" style="margin-top:6px">El token es la contraseña que permite a la app escribir en tu repositorio. Se guarda sólo en este dispositivo y nunca viaja dentro de los datos que se suben.</p>
+    <div style="margin-top:8px"><label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:13px"><input id="sy_recordar" type="checkbox" style="width:auto"> Guardar sesión en este dispositivo</label></div><p class="hint" style="margin-top:6px">Si marcas la casilla, el token y la conexión quedarán guardados en este navegador/PDA. Si no la marcas, se borrarán al cerrar o recargar. El token nunca se incluye en <code>packing.json</code>.</p>
     <details class="guia">
       <summary>De dónde saco el token — paso a paso</summary>
       <ol>
@@ -418,7 +418,7 @@ details.guia code{background:#e9edeb;padding:1px 5px;border-radius:4px;font-fami
 
   <div class="card">
     <h2>Descargas y respaldo</h2>
-    <p class="hint">Los datos se guardan en este dispositivo. Descarga el respaldo al cerrar cada jornada.</p>
+    <p class="hint">Los datos operativos no se cargan automáticamente desde este dispositivo. La copia principal está en el repositorio privado; el respaldo manual sigue disponible como seguridad adicional.</p>
     <div class="actions">
       <button class="btn pri" id="dl_hist">Descargar histórico completo (Excel)</button>
       <button class="btn gh" id="dl_json">Descargar respaldo (JSON)</button>
@@ -445,13 +445,9 @@ const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>
 const S = { cams:[], cfg:{len:2, pos:3, moca:12, sonido:true}, sel:null };
 
 function load(){
-  try{
-    const c = JSON.parse(localStorage.getItem('pk_cfg')||'null');
-    if(c){ S.cfg = {...S.cfg, ...c.cfg}; S.sel = c.sel||null; }
-    const d = JSON.parse(localStorage.getItem('pk_cams')||'null');
-    if(Array.isArray(d)) S.cams = d;
-  }catch(e){}
-  migra(S.cams);
+  /* El repositorio público arranca siempre sin datos operativos.
+     Camiones y bultos sólo entran en memoria al traerlos del repo privado. */
+  S.cams = []; S.sel = null;
 }
 /* Versiones anteriores guardaban entrada y salida del túnel por separado.
    Ahora hay un solo hito: se queda la salida si existe y, si no, la entrada. */
@@ -476,8 +472,8 @@ function save(){
   clearTimeout(tSave);
   tSave = setTimeout(()=>{
     try{
-      localStorage.setItem('pk_cams', JSON.stringify(S.cams));
-      localStorage.setItem('pk_cfg', JSON.stringify({cfg:S.cfg, sel:S.sel}));
+      /* No persistimos camiones ni bultos en el navegador. Sólo viven en
+         esta sesión y en sync/packing.json del repositorio privado. */
     }catch(e){ toast('No queda espacio: descarga el respaldo y borra camiones antiguos','ko'); }
   }, 150);
 }
@@ -813,7 +809,7 @@ function mete(c, cod, anom){
   if(!c.paleActual) c.paleActual = 1;
   if(!c.patron) c.patron = {len: cod.length, num: /^\d+$/.test(cod)};
   if(!c.h.packingIni) marca(c,'packingIni');
-  c.scans.push({c:cod, u, t:new Date().toISOString(), anom: anom||'', p: c.paleActual});
+  c.scans.push({id:syNuevoId(), c:cod, u, t:new Date().toISOString(), anom: anom||'', p: c.paleActual});
   c.ts = new Date().toISOString();
   save();
   pintaGrab(); pintaSelector();
@@ -1099,7 +1095,7 @@ $('#dl_borrar').addEventListener('click', ()=>{
 });
 
 /* ================= versión y actualización ================= */
-const VERSION = 'v6';
+const VERSION = 'v7-privado';
 $('#vr_num').textContent = VERSION;
 $('#vr_chip').textContent = VERSION;
 $('#vr_check').addEventListener('click', async ()=>{
@@ -1126,34 +1122,48 @@ $('#vr_check').addEventListener('click', async ()=>{
    Guarda una copia de los datos en el propio repositorio donde está
    publicada la app. Cada PDA guarda su configuración (usuario, repo, rama,
    token) sólo en su dispositivo; el token nunca viaja dentro del JSON. */
-let SY_CFG = {owner:'', repo:'', branch:'main', token:''};
+let SY_CFG = {owner:'', repo:'', branch:'main', token:'', recordar:false};
 const SY_PATH = 'sync/packing.json';
 let SY_SHA = null;
 
+function syNuevoId(){
+  try{ if(crypto && crypto.randomUUID) return crypto.randomUUID(); }catch(e){}
+  return 's-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,12);
+}
+function syLimpiaIdentidad(v){
+  if(Array.isArray(v)){ v.forEach(syLimpiaIdentidad); return v; }
+  if(v && typeof v==='object'){
+    delete v.operario; delete v.coordinador; delete v.hQuien; delete v.manQuien; delete v.quien;
+    Object.values(v).forEach(syLimpiaIdentidad);
+  }
+  return v;
+}
 function syCargaCfg(){
-  try{ const d = JSON.parse(localStorage.getItem('pk_sync')||'null');
-       if(d) SY_CFG = {owner:d.owner||'', repo:d.repo||'', branch:d.branch||'main', token:d.token||''};
+  try{
+    const d = JSON.parse(localStorage.getItem('pk_sync')||'null');
+    if(d) SY_CFG = {owner:d.owner||'', repo:d.repo||'', branch:d.branch||'main', token:d.token||'', recordar:true};
   }catch(e){}
   $('#sy_owner').value = SY_CFG.owner;
   $('#sy_repo').value  = SY_CFG.repo;
   $('#sy_branch').value= SY_CFG.branch;
   $('#sy_token').value = SY_CFG.token;
+  $('#sy_recordar').checked = !!SY_CFG.recordar;
   $('#sy_info').textContent = (SY_CFG.owner && SY_CFG.repo)
-    ? `Conectado a ${SY_CFG.owner}/${SY_CFG.repo} (${SY_CFG.branch}).`
+    ? `Conexión preparada para ${SY_CFG.owner}/${SY_CFG.repo} (${SY_CFG.branch}). Pulsa «Traer datos de la nube».`
     : 'Sin configurar todavía.';
 }
 $('#sy_savecfg').addEventListener('click', ()=>{
   SY_CFG = {
-    owner: $('#sy_owner').value.trim(),
-    repo:  $('#sy_repo').value.trim(),
-    branch:$('#sy_branch').value.trim() || 'main',
-    token: $('#sy_token').value.trim()
+    owner: $('#sy_owner').value.trim(), repo: $('#sy_repo').value.trim(),
+    branch: $('#sy_branch').value.trim() || 'main', token: $('#sy_token').value.trim(),
+    recordar: $('#sy_recordar').checked
   };
-  if(!SY_CFG.owner || !SY_CFG.repo) return toast('Indica usuario y repositorio','ko');
-  localStorage.setItem('pk_sync', JSON.stringify(SY_CFG));
+  if(!SY_CFG.owner || !SY_CFG.repo || !SY_CFG.token) return toast('Indica repositorio y token','ko');
+  if(SY_CFG.recordar) localStorage.setItem('pk_sync', JSON.stringify({owner:SY_CFG.owner,repo:SY_CFG.repo,branch:SY_CFG.branch,token:SY_CFG.token}));
+  else localStorage.removeItem('pk_sync');
   SY_SHA = null;
-  $('#sy_info').textContent = `Conectado a ${SY_CFG.owner}/${SY_CFG.repo} (${SY_CFG.branch}).`;
-  toast('Datos de conexión guardados','ok');
+  $('#sy_info').textContent = `Conectado a ${SY_CFG.owner}/${SY_CFG.repo} (${SY_CFG.branch})${SY_CFG.recordar?' · sesión guardada':''}.`;
+  toast(SY_CFG.recordar?'Sesión guardada en este dispositivo':'Conexión usada sin guardar sesión','ok');
 });
 
 /* Con mala cobertura fetch() puede quedarse esperando para siempre y la barra
@@ -1209,7 +1219,7 @@ async function syFetchRemoto(){
   if(r.status===404){ SY_SHA=null; return {datos:null}; }
   if(!r.ok) throw new Error('No se pudo leer la nube ('+r.status+')');
   const texto = await textoDeRespuesta(r);
-  try{ return {datos: JSON.parse(texto)}; }
+  try{ const datos=JSON.parse(texto); syLimpiaIdentidad(datos); return {datos}; }
   catch(e){ throw new Error('El archivo de la nube no es válido'); }
 }
 
@@ -1219,7 +1229,7 @@ async function syFetchRemoto(){
    camiones se emparejan por código y fecha, así que da igual que dos PDAs
    hayan dado de alta el mismo camión por su cuenta. */
 const syClaveCam  = c => (c.codigo||'').toUpperCase()+'|'+(c.fecha||'');
-const syClaveScan = x => x.c+'|'+x.u+'|'+(x.t||'');
+const syClaveScan = x => x.id ? 'ID|'+x.id : 'LEG|'+x.c+'|'+x.u+'|'+(x.t||'');
 function syMergeCam(loc, rem){
   if(!loc) return rem;
   if(!rem) return loc;
@@ -1253,6 +1263,20 @@ function syMergeCams(locales, remotos){
   return [...porClave.values()].sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
 }
 
+function syIntegraRemoto(datos){
+  if(!datos) return;
+  syLimpiaIdentidad(datos);
+  migra(datos.cams||[]);
+  S.cams = syMergeCams(S.cams||[], datos.cams||[]);
+  if(datos.cfg) S.cfg = {...S.cfg, ...datos.cfg};
+  if(!S.sel && S.cams.length) S.sel=S.cams[0].id;
+  if(S.sel && !S.cams.some(c=>c.id===S.sel)) S.sel=S.cams.length?S.cams[0].id:null;
+}
+function syCuerpoActual(){
+  syLimpiaIdentidad(S.cams);
+  return JSON.stringify({v:1, cfg:{len:S.cfg.len,pos:S.cfg.pos,moca:S.cfg.moca}, cams:S.cams});
+}
+
 /* ---- barra de arriba ---- */
 function pintaNube(estado, clase){
   const e = $('#nb_est'); if(!e) return;
@@ -1272,66 +1296,41 @@ $('#nb_pull').addEventListener('click', ()=> $('#sy_pull').click());
 
 $('#sy_push').addEventListener('click', async ()=>{
   if(!SY_CFG.owner || !SY_CFG.repo || !SY_CFG.token) return toast('Rellena y guarda antes la conexión','ko');
-  const t0=Date.now();
-  nubeOcupada(true); pintaNube('Subiendo…','pend');
-  $('#sy_info').textContent = 'Subiendo…';
+  const t0=Date.now(); nubeOcupada(true); pintaNube('Fusionando y subiendo…','pend');
+  $('#sy_info').textContent='Fusionando con la nube antes de subir…';
   try{
-    const cuerpo = JSON.stringify({v:1, cfg:{len:S.cfg.len, pos:S.cfg.pos, moca:S.cfg.moca}, cams:S.cams});
-    const {b64, comprimido} = await gzipB64(cuerpo);
-    pintaNube(`Subiendo ${kb(b64.length)}…`,'pend');
-
-    if(SY_SHA===null) SY_SHA = await syShaRemoto();
-    const enviar = sha => fetchConLimite(syApi(SY_PATH), {
-      method:'PUT',
-      headers:{'Authorization':`Bearer ${SY_CFG.token}`,'Accept':'application/vnd.github+json','Content-Type':'application/json'},
-      body: JSON.stringify({message:'Packing list '+new Date().toISOString(), content:b64, branch:SY_CFG.branch, sha:sha||undefined})
-    });
-    let r = await enviar(SY_SHA);
-    if(r.status===409 || r.status===422){        // otra PDA subió entretanto
+    const prepara = async ()=>{
       SY_SHA = await syShaRemoto();
-      r = await enviar(SY_SHA);
-    }
+      if(SY_SHA){ const {datos}=await syFetchRemoto(); if(datos) syIntegraRemoto(datos); }
+      return await gzipB64(syCuerpoActual());
+    };
+    let paquete=await prepara(), b64=paquete.b64, comprimido=paquete.comprimido;
+    const enviar=sha=>fetchConLimite(syApi(SY_PATH),{method:'PUT',headers:{'Authorization':`Bearer ${SY_CFG.token}`,'Accept':'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify({message:'Packing list '+new Date().toISOString(),content:b64,branch:SY_CFG.branch,sha:sha||undefined})});
+    let r=await enviar(SY_SHA);
+    if(r.status===409 || r.status===422){ paquete=await prepara(); b64=paquete.b64; comprimido=paquete.comprimido; r=await enviar(SY_SHA); }
     if(!r.ok) throw new Error('GitHub rechazó la subida ('+r.status+')');
-    const j = await r.json().catch(()=>null);
-    SY_SHA = (j && j.content && j.content.sha) || null;
-
-    const bul = S.cams.reduce((a,c)=>a+nBultos(c),0);
-    const seg = ((Date.now()-t0)/1000).toFixed(1);
-    $('#sy_info').innerHTML = `Subido en ${seg} s · ${new Date().toLocaleString('es-ES')}<br>`+
-      `<b>${S.cams.length} camiones · ${miles(bul)} bultos</b> · ${kb(b64.length)}`+(comprimido?' comprimido':' sin comprimir');
-    S.cfg.ultimaNube = new Date().toISOString();
-    save(); SIN_SUBIR = false; pintaNube();
-    toast(`Subido en ${seg} s`,'ok');
-  }catch(err){
-    $('#sy_info').textContent = 'Error al subir: '+err.message;
-    pintaNube('No se pudo subir','malo'); toast('No se pudo subir','ko');
-  }finally{ nubeOcupada(false); }
+    const j=await r.json().catch(()=>null); SY_SHA=(j&&j.content&&j.content.sha)||null;
+    const bul=S.cams.reduce((a,c)=>a+nBultos(c),0), seg=((Date.now()-t0)/1000).toFixed(1);
+    $('#sy_info').innerHTML=`Fusionado y subido en ${seg} s · ${new Date().toLocaleString('es-ES')}<br><b>${S.cams.length} camiones · ${miles(bul)} bultos</b> · ${kb(b64.length)}`+(comprimido?' comprimido':' sin comprimir');
+    S.cfg.ultimaNube=new Date().toISOString(); SIN_SUBIR=false; pintaNube(); render(); toast('Fusionado y subido','ok');
+  }catch(err){ $('#sy_info').textContent='Error al subir: '+err.message; pintaNube('No se pudo subir','malo'); toast('No se pudo subir','ko'); }
+  finally{ nubeOcupada(false); }
 });
 
 $('#sy_pull').addEventListener('click', async ()=>{
   if(!SY_CFG.owner || !SY_CFG.repo || !SY_CFG.token) return toast('Rellena y guarda antes la conexión','ko');
-  const t0=Date.now();
-  nubeOcupada(true); pintaNube('Trayendo…','pend');
-  $('#sy_info').textContent = 'Trayendo…';
+  const t0=Date.now(), dirty=SIN_SUBIR; nubeOcupada(true); pintaNube('Trayendo y fusionando…','pend');
+  $('#sy_info').textContent='Trayendo y fusionando…';
   try{
-    const {datos} = await syFetchRemoto();
-    if(!datos){ $('#sy_info').textContent = 'Todavía no hay nada subido a la nube.'; pintaNube(); return; }
-    const antesC = S.cams.length, antesB = S.cams.reduce((a,c)=>a+nBultos(c),0);
-    migra(datos.cams||[]);
-    S.cams = syMergeCams(S.cams, datos.cams||[]);
-    if(!S.sel && S.cams.length) S.sel = S.cams[0].id;
-    if(!S.cams.some(c=>c.id===S.sel)) S.sel = S.cams.length ? S.cams[0].id : null;
-    save(); render();
-    const ahoraC = S.cams.length, ahoraB = S.cams.reduce((a,c)=>a+nBultos(c),0);
-    const seg = ((Date.now()-t0)/1000).toFixed(1);
-    $('#sy_info').innerHTML = `Traído en ${seg} s · ${new Date().toLocaleString('es-ES')}<br>`+
-      `Camiones: ${antesC} → <b>${ahoraC}</b> · bultos: ${miles(antesB)} → <b>${miles(ahoraB)}</b>`;
-    S.cfg.ultimaNube = new Date().toISOString(); save(); pintaNube();
-    toast(`Traído en ${seg} s · ${ahoraB-antesB} bultos nuevos`,'ok');
-  }catch(err){
-    $('#sy_info').textContent = 'Error al traer: '+err.message;
-    pintaNube('No se pudo traer','malo'); toast('No se pudo traer','ko');
-  }finally{ nubeOcupada(false); }
+    const {datos}=await syFetchRemoto();
+    if(!datos){ $('#sy_info').textContent='Todavía no hay nada subido a la nube.'; pintaNube(); return; }
+    const antesC=S.cams.length, antesB=S.cams.reduce((a,c)=>a+nBultos(c),0);
+    syIntegraRemoto(datos); render();
+    const ahoraC=S.cams.length, ahoraB=S.cams.reduce((a,c)=>a+nBultos(c),0), seg=((Date.now()-t0)/1000).toFixed(1);
+    $('#sy_info').innerHTML=`Traído y fusionado en ${seg} s · ${new Date().toLocaleString('es-ES')}<br>Camiones: ${antesC} → <b>${ahoraC}</b> · bultos: ${miles(antesB)} → <b>${miles(ahoraB)}</b>`;
+    S.cfg.ultimaNube=new Date().toISOString(); SIN_SUBIR=dirty; pintaNube(); toast('Datos fusionados','ok');
+  }catch(err){ SIN_SUBIR=dirty; $('#sy_info').textContent='Error al traer: '+err.message; pintaNube('No se pudo traer','malo'); toast('No se pudo traer','ko'); }
+  finally{ nubeOcupada(false); }
 });
 
 /* ============ generador XLSX (ZIP sin comprimir + CRC32) ============ */
