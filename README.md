@@ -101,17 +101,15 @@ mandar, y *al día* con la hora cuando ya está todo arriba.
 ### 6 · Publicar cambios más adelante
 
 Cada versión de la app lleva un número, que se ve en **Datos → Versión**. Esta
-es la **v4**. Para publicar una nueva:
+es la **v6**. Para publicar una nueva:
 
 1. En el repositorio, entra en `sw.js` y pulsa el lápiz para editarlo.
-2. Cambia `packing-v4` por `packing-v5` (y así sucesivamente). **Este paso es
+2. Cambia `packing-v6` por `packing-v7` (y así sucesivamente), y en `index.html`
+   busca `const VERSION = 'v6';` y súbelo igual. **Este paso es
    obligatorio**: si no subes el número, las PDAs seguirán con la versión vieja.
 3. Sube el `index.html` nuevo con **Add file → Upload files**; GitHub te
    preguntará si quieres reemplazar el que ya está y le dices que sí.
 4. Las PDAs se actualizarán solas la próxima vez que tengan red.
-
-La versión que corre cada PDA se ve en la chapa naranja de la cabecera, al lado
-del título.
 
 **Si una PDA no se actualiza**, entra en **Datos → Versión**, mira el número y
 pulsa **Buscar actualización ahora**. Borra la copia guardada y vuelve a bajar
@@ -135,21 +133,26 @@ y **un solo botón: el del paso siguiente**. No hay que buscar nada.
 
 ### Grabar bultos
 
-Se escanea directamente, sin escribir nada. La app no pide ni guarda nombres
-de nadie: ni operario ni coordinador. Cada lectura se guarda al instante y
-suena un pitido corto.
+Se escanean bultos sin tocar la pantalla. Cada lectura se guarda al instante
+y suena un pitido corto.
 
 El **primer bulto del camión fija el patrón**: cuántos caracteres tiene el
 código y si son sólo números. Lo que no encaje salta como anomalía con dos
-botones, *Sí, está bien* y *No, descartar*. Nunca se bloquea nada: decide el
-operario, y lo aceptado queda marcado como anomalía en el Excel.
+botones, *Sí, está bien* y *No, descartar*. Nunca se bloquea nada: se decide
+ahí mismo, y lo aceptado queda marcado como anomalía en el Excel.
 
 Si el lector dispara dos veces seguidas con el mismo código en menos de un
 tercio de segundo, la segunda lectura se ignora y se avisa en pantalla.
 
 Tocando un bulto de la lista se corrigen sus unidades o se quita. La corrección
-queda registrada: en el Excel salen las unidades que se leyeron y quién las
-cambió.
+queda registrada: en el Excel salen las unidades que se leyeron y si hubo
+corrección.
+
+Arriba de los bultos hay una barra negra con el **pale actual** y cuántos
+bultos y unidades lleva. El botón **Cerrar pale** hace el conteo (bultos y
+uds), lo confirma, lo deja guardado como pale cerrado, y abre el siguiente
+pale con el número siguiente. Los pales cerrados quedan como chips debajo de
+la barra, y en el Excel cada bulto lleva su número de pale.
 
 Al terminar, **Packing terminado** cierra el packing y lleva a la pantalla del
 packing list.
@@ -157,8 +160,8 @@ packing list.
 ### Packing list
 
 Arriba, el estado del camión con sus cuatro marcas de tiempo: llegada, packing
-terminado, pasado por túnel y expedición. Cada una guarda sólo la hora. Si alguien marcó tarde, se corrige la hora a mano con el
-selector de abajo, y queda anotado como *(a mano)*.
+terminado, pasado por túnel y expedición. Si alguien marcó tarde, se corrige
+la hora a mano con el selector de abajo, y queda anotado como *(a mano)*.
 
 **Deshacer** un hito borra también los posteriores, para que no quede un camión
 expedido sin haber pasado por el túnel.
@@ -183,10 +186,10 @@ Configurables en la pestaña Datos. Por defecto, sobre `84178016200200287`:
 
 Tres hojas:
 
-1. **Packing list** — una línea por bulto: camión, fecha, nº de bulto, código,
-   mocacota, unidades, unidades leídas antes de corregir, si se corrigió,
-   anomalía, observaciones, hora, y las marcas de túnel y expedición repetidas
-   en cada línea para poder filtrar.
+1. **Packing list** — una línea por bulto: camión, fecha, pale, nº de bulto,
+   código, mocacota, unidades, unidades leídas antes de corregir, si hubo
+   corrección, anomalía, observaciones, hora, y las marcas de túnel y
+   expedición repetidas en cada línea para poder filtrar.
 2. **Resumen por artículo** — cuántos bultos hay de cada artículo y tamaño, y
    cuántas unidades suman.
 3. **Camiones** — una línea por camión con su estado y todas sus horas.

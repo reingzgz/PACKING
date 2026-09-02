@@ -1,6 +1,6 @@
 /* Packing list — funcionamiento sin cobertura.
    Sube VERSION al publicar cambios y las PDAs se actualizan solas. */
-const VERSION = 'packing-v4';
+const VERSION = 'packing-v6';
 const ARCHIVOS = ['./', './index.html', './manifest.json', './icon.svg'];
 
 self.addEventListener('install', e => {

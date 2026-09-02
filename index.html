@@ -11,11 +11,11 @@
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <style>
 :root{
-  --ink:#14181c; --steel:#39434c; --mute:#79858f;
-  --paper:#eef1ef; --card:#ffffff; --line:#d3d9d6;
-  --amber:#ff7a00; --amber-d:#c65c00;
+  --ink:#000000; --steel:#2b2b2b; --mute:#6b6b6b;
+  --paper:#f2f2ee; --card:#ffffff; --line:#d8d5c8;
+  --amber:#ffcc00; --amber-d:#8a6d00;
   --ok:#12855a; --ok-bg:#e3f5ec;
-  --ko:#c62a1c; --ko-bg:#fdeae8;
+  --ko:#e5231b; --ko-bg:#fdeae8;
   --warn:#8a6100; --warn-bg:#fdf3dc;
   --cold:#0f6f9e; --cold-bg:#e2f1f9;
   --mono: ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
@@ -29,11 +29,11 @@ h1,h2,h3{margin:0}
 .hide{display:none !important}
 
 header{position:sticky;top:0;z-index:40;background:var(--ink);color:#fff}
-.hz{height:6px;background:repeating-linear-gradient(45deg,var(--amber) 0 12px,#1b2126 12px 24px)}
+.hz{height:7px;background:repeating-linear-gradient(45deg,var(--amber) 0 12px,#000 12px 24px)}
 .htop{display:flex;align-items:center;gap:10px;padding:9px 12px}
 .brand{font-weight:800;letter-spacing:.14em;font-size:12px;text-transform:uppercase;white-space:nowrap}
 .brand span{color:var(--amber)}
-.vchip{font-family:var(--mono);font-size:11px;font-weight:800;color:#171008;background:var(--amber);
+.vchip{font-family:var(--mono);font-size:11px;font-weight:800;color:#000;background:var(--amber);
   padding:2px 7px;border-radius:99px;letter-spacing:.04em}
 .active-cont{margin-left:auto;min-width:0}
 .active-cont select{background:#222a30;color:#fff;border:1px solid #3c464e;border-radius:7px;padding:7px 8px;max-width:56vw;font-size:14px}
@@ -44,7 +44,7 @@ nav button.on{color:#fff;border-bottom-color:var(--amber)}
 .nube{display:flex;gap:8px;align-items:center;padding:8px 12px;background:#222a30;border-top:1px solid #2f393f}
 .nube .nb{flex:0 0 auto;border:1.5px solid #3c464e;background:#2b343b;color:#fff;font-weight:700;
   font-size:12.5px;padding:8px 12px;border-radius:8px;cursor:pointer;font-family:inherit;white-space:nowrap}
-.nube .nb.sub{background:var(--amber);border-color:var(--amber);color:#171008}
+.nube .nb.sub{background:var(--amber);border-color:var(--amber);color:#000}
 .nube .nb:disabled{opacity:.5;cursor:wait}
 .nube .nb_est{flex:1;min-width:0;font-size:11.5px;color:#95a1aa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nube .nb_est b{color:#fff}
@@ -63,7 +63,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:var(--amber);box-
 input.mono{font-family:var(--mono)}
 input[readonly]{background:#f4f6f5;color:var(--steel)}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:11px 15px;border-radius:9px;border:1.5px solid var(--ink);background:var(--ink);color:#fff;font-weight:700;cursor:pointer;font-size:14px}
-.btn.pri{background:var(--amber);border-color:var(--amber);color:#171008}
+.btn.pri{background:var(--amber);border-color:var(--amber);color:#000}
 .btn.gh{background:#fff;color:var(--ink)}
 .btn.sm{padding:7px 10px;font-size:12.5px;border-radius:7px}
 .btn.dgr{border-color:var(--ko);color:var(--ko);background:#fff}
@@ -138,6 +138,18 @@ input[readonly]{background:#f4f6f5;color:var(--steel)}
 .anom .atxt{font-size:13px;color:var(--steel);line-height:1.5}
 .anom .acod{font-family:var(--mono);font-size:17px;margin:8px 0;word-break:break-all}
 
+/* barra del pale actual */
+.paleBar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#000;color:#fff;
+  border-radius:11px;padding:11px 14px;margin-bottom:10px}
+.paleBar .pnum{font-weight:900;font-size:15px;letter-spacing:.04em}
+.paleBar .pnum b{color:var(--amber);font-size:19px;font-family:var(--mono)}
+.paleBar .pcount{font-size:12.5px;color:#cfcfc7;flex:1 1 auto;min-width:0}
+.paleBar .pcount b{color:#fff;font-family:var(--mono)}
+.paleBar .btn{background:var(--amber);border-color:var(--amber);color:#000}
+.paleHist{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.pchip{display:inline-flex;align-items:center;gap:5px;border:1.5px solid #000;background:var(--amber);
+  color:#000;border-radius:8px;padding:5px 9px;font-size:11.5px;font-weight:800;font-family:var(--mono)}
+
 .marcador{display:grid;grid-template-columns:repeat(auto-fit,minmax(122px,1fr));gap:10px}
 .mk{background:#f4f6f5;border:1.5px solid var(--line);border-radius:10px;padding:10px}
 .mk b{display:block;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin-bottom:4px}
@@ -190,7 +202,7 @@ details.guia code{background:#e9edeb;padding:1px 5px;border-radius:4px;font-fami
   <div class="hz"></div>
   <div class="htop">
     <div class="brand">Packing <span>/</span> List</div>
-    <span class="vchip" id="vr_chip">v4</span>
+    <span class="vchip" id="vr_chip">v3</span>
     <div class="active-cont"><select id="selCam"></select></div>
   </div>
   <nav id="nav">
@@ -243,7 +255,6 @@ details.guia code{background:#e9edeb;padding:1px 5px;border-radius:4px;font-fami
 
   <div class="card hide" id="g_card">
     <div class="quien">
-      <label>Camión</label>
       <span class="chip pend" id="g_camShow"></span>
     </div>
 
@@ -262,23 +273,23 @@ details.guia code{background:#e9edeb;padding:1px 5px;border-radius:4px;font-fami
       </div>
     </div>
 
-    <div id="g_mal" class="mal hide">
-      <div class="mal_tit">⚠ MAL ESTIRADO</div>
-      <div class="mal_txt">Este bulto no es igual que el anterior del palé.</div>
-      <div class="mal_par"><i>Anterior</i><span class="mono" id="mal_ant"></span></div>
-      <div class="mal_par"><i>Escaneado</i><span class="mono" id="mal_act"></span></div>
-      <div class="actions"><button class="btn gh sm" id="mal_ok">Enterado, seguir</button></div>
-    </div>
-
     <div id="g_eco" class="eco">Aún no has escaneado nada</div>
     <div id="g_ultimo" class="ultimo"></div>
   </div>
 
   <div class="card hide" id="g_form">
+    <div class="paleBar">
+      <div class="pnum">PALE <b id="pl_num">1</b></div>
+      <div class="pcount" id="pl_count">0 bultos · 0 uds en este pale</div>
+      <button class="btn sm" id="pl_cerrar">Cerrar pale</button>
+    </div>
+    <div class="paleHist" id="pl_hist"></div>
+
     <div class="marcador">
       <div class="mk"><b>Bultos</b><span id="r_nb">0</span></div>
       <div class="mk hero"><b>Total uds</b><span id="r_total">0</span></div>
       <div class="mk"><b>Artículos</b><span id="r_art">0</span></div>
+      <div class="mk"><b>Pales cerrados</b><span id="r_pales">0</span></div>
     </div>
 
     <div id="g_bultos" class="tally"></div>
@@ -345,7 +356,7 @@ details.guia code{background:#e9edeb;padding:1px 5px;border-radius:4px;font-fami
   <div class="card">
     <h2>Versión</h2>
     <div class="verfila">
-      <span class="vernum" id="vr_num">v4</span>
+      <span class="vernum" id="vr_num">v2</span>
       <div>
         <p class="hint" style="margin:0">Si una PDA enseña un número más bajo, tiene una copia antigua guardada.
           Pulsa el botón: borra la copia y vuelve a bajar la app. <b>Los datos no se tocan.</b></p>
@@ -446,8 +457,11 @@ function load(){
    Ahora hay un solo hito: se queda la salida si existe y, si no, la entrada. */
 function migra(cams){
   cams.forEach(c=>{
-    c.h = c.h || {}; c.hMano = c.hMano || {}; c.scans = c.scans || [];
-    delete c.hQuien; delete c.operario;   // versiones antiguas guardaban nombres
+    c.h = c.h || {}; c.hManual = c.hManual || {}; c.scans = c.scans || [];
+    delete c.hQuien; delete c.operario;
+    c.pales = c.pales || [];
+    if(!c.paleActual) c.paleActual = 1;
+    c.scans.forEach(x=>{ if(x.p===undefined) x.p = 1; delete x.manQuien; });
     if(c.h.tunelIn || c.h.tunelOut){
       c.h.tunel = c.h.tunelOut || c.h.tunelIn;
       delete c.h.tunelIn; delete c.h.tunelOut;
@@ -483,6 +497,9 @@ const fmtHora = ts => ts ? new Date(ts).toLocaleTimeString('es-ES',{hour:'2-digi
 const nBultos = c => (c.scans||[]).length;
 const totalUds = c => (c.scans||[]).reduce((a,x)=>a+x.u,0);
 const nArts = c => new Set((c.scans||[]).map(x=>mocacota(x.c))).size;
+const scansPale = (c,n) => (c.scans||[]).filter(x=>x.p===n);
+const bultosPale = (c,n) => scansPale(c,n).length;
+const udsPale = (c,n) => scansPale(c,n).reduce((a,x)=>a+x.u,0);
 const miles = n => Number(n||0).toLocaleString('es-ES');
 
 function desde(ts){
@@ -531,8 +548,6 @@ const HITO_NOMBRE = {llegada:'Llegada', packingIni:'Packing empezado', packingFi
 function marca(c, k){
   c.h = c.h || {};
   c.h[k] = new Date().toISOString();
-  c.hMano = c.hMano || {};
-  delete c.hMano[k];
   c.ts = new Date().toISOString();
   save();
 }
@@ -540,7 +555,7 @@ function desmarca(c, k){
   if(!c.h) return;
   /* al deshacer un hito se caen también los posteriores */
   const orden = ['llegada','packingIni','packingFin','tunel','expedido'];
-  orden.slice(orden.indexOf(k)).forEach(x=>{ delete c.h[x]; if(c.hMano) delete c.hMano[x]; });
+  orden.slice(orden.indexOf(k)).forEach(x=>{ delete c.h[x]; if(c.hManual) delete c.hManual[x]; });
   c.ts = new Date().toISOString();
   save();
 }
@@ -663,9 +678,8 @@ $('#nc_add').addEventListener('click', ()=>{
   const c = {
     id: 'c'+Date.now().toString(36),
     codigo: cod, fecha: fec, obs:'', scans: [], ts: new Date().toISOString(),
-    patron: null,
-    h: { llegada: new Date().toISOString() },
-    hMano: {}
+    patron: null, paleActual: 1, pales: [],
+    h: { llegada: new Date().toISOString() }
   };
   S.cams.unshift(c); S.sel = c.id; save();
   $('#nc_cod').value='';
@@ -675,11 +689,9 @@ $('#nc_add').addEventListener('click', ()=>{
 /* ================= grabar bultos ================= */
 let ANOM = null, EB_I = null, ULT = {c:'', t:0};
 
-/* No se pide ningún nombre: en cuanto hay un camión activo se escanea. */
 function puerta(){
-  const hay = !!cam();
-  $('#g_card').classList.toggle('hide', !hay);
-  $('#g_form').classList.toggle('hide', !hay);
+  $('#g_card').classList.toggle('hide', !cam());
+  $('#g_form').classList.toggle('hide', !cam());
 }
 function foco(){
   const i=$('#g_scan');
@@ -700,9 +712,20 @@ function pintaGrab(){
   $('#r_nb').textContent = miles(nBultos(c));
   $('#r_total').textContent = miles(totalUds(c));
   $('#r_art').textContent = nArts(c);
+  $('#r_pales').textContent = miles((c.pales||[]).length);
   $('#g_obs').value = c.obs||'';
   $('#g_sonido').textContent = 'Sonido: ' + (S.cfg.sonido?'activado':'apagado');
   pintaBultos();
+  pintaPales();
+}
+function pintaPales(){
+  const c = cam(); if(!c) return;
+  if(!c.paleActual) c.paleActual = 1;
+  if(!c.pales) c.pales = [];
+  $('#pl_num').textContent = c.paleActual;
+  $('#pl_count').innerHTML = `<b>${miles(bultosPale(c,c.paleActual))}</b> bultos · <b>${miles(udsPale(c,c.paleActual))}</b> uds en este pale`;
+  $('#pl_hist').innerHTML = c.pales.map(p=>
+    `<span class="pchip">Pale ${p.n} · ${miles(p.bultos)} blt · ${miles(p.uds)} uds</span>`).join('');
 }
 function pintaBultos(){
   const c = cam(); if(!c) return;
@@ -713,7 +736,7 @@ function pintaBultos(){
     const i = s.length-1-ri;
     const cod = String(x.c);
     return `<div class="bul ${x.u!==comun?'pico':''} ${x.anom?'anom':''}" data-i="${i}">
-      <i>${i+1}</i> ${esc(cod.slice(0,S.cfg.moca))}<b>…${esc(cod.slice(-3))}</b> <i>${x.u}</i></div>`;
+      <i>P${x.p||1}·${i+1}</i> ${esc(cod.slice(0,S.cfg.moca))}<b>…${esc(cod.slice(-3))}</b> <i>${x.u}</i></div>`;
   }).join('');
 }
 $('#g_bultos').addEventListener('click', e=>{
@@ -787,9 +810,10 @@ function mete(c, cod, anom){
     pita(false); return;
   }
   c.h = c.h || {}; c.scans = c.scans || [];
+  if(!c.paleActual) c.paleActual = 1;
   if(!c.patron) c.patron = {len: cod.length, num: /^\d+$/.test(cod)};
   if(!c.h.packingIni) marca(c,'packingIni');
-  c.scans.push({c:cod, u, t:new Date().toISOString(), anom: anom||''});
+  c.scans.push({c:cod, u, t:new Date().toISOString(), anom: anom||'', p: c.paleActual});
   c.ts = new Date().toISOString();
   save();
   pintaGrab(); pintaSelector();
@@ -857,6 +881,20 @@ $('#g_obsTags').addEventListener('click', e=>{
   $('#g_obs').value = c.obs; save(); foco();
 });
 $('#g_sonido').addEventListener('click', ()=>{ S.cfg.sonido=!S.cfg.sonido; save(); pintaGrab(); });
+$('#pl_cerrar').addEventListener('click', ()=>{
+  const c=cam(); if(!c) return;
+  if(!c.paleActual) c.paleActual = 1;
+  const n = c.paleActual, blt = bultosPale(c,n), uds = udsPale(c,n);
+  if(!blt) return toast('Todavía no hay bultos en este pale','ko');
+  if(!confirm(`¿Cerrar el pale ${n}?\n\n${blt} bultos · ${uds} uds`)) return;
+  c.pales = c.pales || [];
+  c.pales.push({n, bultos:blt, uds, ts:new Date().toISOString()});
+  c.paleActual = n+1;
+  c.ts = new Date().toISOString();
+  save(); pintaGrab(); foco();
+  eco('good', `Pale ${n} cerrado`, `${blt} bultos · ${uds} uds`);
+  toast(`Pale ${n} cerrado: ${blt} bultos · ${uds} uds`,'ok');
+});
 $('#g_fin').addEventListener('click', ()=>{
   const c=cam(); if(!c) return;
   if(!nBultos(c)) return toast('Todavía no has escaneado ningún bulto','ko');
@@ -875,12 +913,12 @@ function pintaPack(){
     E.innerHTML = '<div class="empty">Da de alta un camión en el tablero.</div>';
     R.innerHTML=''; T.innerHTML=''; return;
   }
-  const h=c.h||{}, mano=c.hMano||{}, e=etapa(c), sig=siguiente(c);
+  const h=c.h||{}, m=c.hManual||{}, e=etapa(c), sig=siguiente(c);
   const hito = (k, txt, clase, fijo) => {
     const done = !!h[k];
     return `<div class="hito ${clase||''} ${done?'done':''}">
       <div class="ht">${done?'✓ ':''}${txt}</div>
-      <div class="hd">${done ? `<b>${fmtTs(h[k])}</b>${mano[k]?' · puesto a mano':''}` : 'Todavía no'}</div>
+      <div class="hd">${done ? `<b>${fmtTs(h[k])}</b>${m[k]?' · (a mano)':''}` : 'Todavía no'}</div>
       ${done && !fijo ? `<button class="btn gh sm" data-undo="${k}">Deshacer</button>` : ''}
     </div>`;
   };
@@ -908,6 +946,7 @@ function pintaPack(){
       <div class="mk"><b>Bultos</b><span>${miles(nBultos(c))}</span></div>
       <div class="mk hero"><b>Total uds</b><span>${miles(totalUds(c))}</span></div>
       <div class="mk"><b>Artículos</b><span>${nArts(c)}</span></div>
+      <div class="mk"><b>Pales cerrados</b><span>${miles((c.pales||[]).length)}</span></div>
       <div class="mk"><b>Anomalías</b><span>${(c.scans||[]).filter(x=>x.anom).length}</span></div>
     </div>
     <div class="actions">
@@ -939,8 +978,7 @@ $('#v-pack').addEventListener('click', e=>{
     const k=$('#pk_hk').value, v=$('#pk_hv').value;
     if(!v) return toast('Elige fecha y hora','ko');
     c.h = c.h||{}; c.h[k] = new Date(v).toISOString();
-    c.hMano = c.hMano||{}; c.hMano[k] = true;
-    c.ts = new Date().toISOString();
+    c.hManual = c.hManual||{}; c.hManual[k] = true;
     save(); render(); toast('Hora corregida','ok'); return;
   }
   if(b.id==='pk_xls'){
@@ -956,10 +994,10 @@ $('#v-pack').addEventListener('click', e=>{
 });
 
 /* ================= hojas del Excel ================= */
-const CAB_PACK = ['Camión','Fecha','Nº bulto','Código bulto','Mocacota','Uds','Uds leídas','Corregido',
+const CAB_PACK = ['Camión','Fecha','Pale','Nº bulto','Código bulto','Mocacota','Uds','Uds leídas','Corregido',
                   'Anomalía','Observaciones','Hora','Túnel','Expedido'];
 const CAB_ART  = ['Mocacota','Uds por bulto','Nº de bultos','Uds totales'];
-const CAB_CAM  = ['Camión','Fecha','Estado','Bultos','Total uds','Artículos',
+const CAB_CAM  = ['Camión','Fecha','Estado','Bultos','Total uds','Artículos','Pales cerrados',
                   'Llegada','Packing terminado','Túnel','Expedido','Observaciones'];
 
 function filasPack(cs){
@@ -967,7 +1005,7 @@ function filasPack(cs){
   cs.forEach(c=>{
     const h=c.h||{};
     (c.scans||[]).forEach((x,i)=>{
-      F.push([c.codigo, fmtFecha(c.fecha), i+1, x.c, mocacota(x.c), x.u,
+      F.push([c.codigo, fmtFecha(c.fecha), x.p||1, i+1, x.c, mocacota(x.c), x.u,
               x.uOrig!==undefined ? x.uOrig : '', x.man ? 'sí' : '',
               x.anom||'', c.obs||'',
               x.t ? new Date(x.t).toLocaleString('es-ES') : '',
@@ -991,7 +1029,7 @@ function filasArt(cs){
 function filasCam(cs){
   return cs.map(c=>{
     const h=c.h||{};
-    return [c.codigo, fmtFecha(c.fecha), ETAPAS[etapa(c)].n, nBultos(c), totalUds(c), nArts(c),
+    return [c.codigo, fmtFecha(c.fecha), ETAPAS[etapa(c)].n, nBultos(c), totalUds(c), nArts(c), (c.pales||[]).length,
             fmtTs(h.llegada), fmtTs(h.packingFin)||'NO', fmtTs(h.tunel)||'NO',
             fmtTs(h.expedido)||'NO', c.obs||''];
   });
@@ -1045,7 +1083,7 @@ $('#file_json').addEventListener('change', e=>{
       if(!Array.isArray(d.cams)) throw new Error('formato');
       const nuevos = d.cams.filter(c=>!S.cams.some(x=>x.codigo===c.codigo && x.fecha===c.fecha));
       S.cams = [...nuevos, ...S.cams];
-      if(d.cfg) S.cfg = {...S.cfg, len:d.cfg.len||S.cfg.len, pos:d.cfg.pos||S.cfg.pos, moca:d.cfg.moca||S.cfg.moca};
+      if(d.cfg) S.cfg = {...S.cfg, ...d.cfg};
       if(!S.sel && S.cams.length) S.sel = S.cams[0].id;
       save(); render();
       toast(`Restaurado: ${nuevos.length} camiones nuevos`,'ok');
@@ -1061,7 +1099,7 @@ $('#dl_borrar').addEventListener('click', ()=>{
 });
 
 /* ================= versión y actualización ================= */
-const VERSION = 'v4';
+const VERSION = 'v6';
 $('#vr_num').textContent = VERSION;
 $('#vr_chip').textContent = VERSION;
 $('#vr_check').addEventListener('click', async ()=>{
@@ -1193,10 +1231,17 @@ function syMergeCam(loc, rem){
   const base = (loc.ts||'') >= (rem.ts||'') ? loc : rem;
   const otro = base===loc ? rem : loc;
   const out = {...base, id: loc.id, scans,
-               h:     {...(otro.h||{}),     ...(base.h||{})},
-               hMano: {...(otro.hMano||{}), ...(base.hMano||{})}};
+               h:       {...(otro.h||{}),       ...(base.h||{})},
+               hManual: {...(otro.hManual||{}), ...(base.hManual||{})}};
   if(!(out.obs||'').trim()) out.obs = (loc.obs||'').trim() || (rem.obs||'').trim() || '';
   if(!out.patron) out.patron = loc.patron || rem.patron || null;
+  out.paleActual = Math.max(loc.paleActual||1, rem.paleActual||1);
+  const palesPorN = new Map();
+  [...(loc.pales||[]), ...(rem.pales||[])].forEach(p=>{
+    const ex = palesPorN.get(p.n);
+    if(!ex || (p.ts||'') > (ex.ts||'')) palesPorN.set(p.n, p);
+  });
+  out.pales = [...palesPorN.values()].sort((a,b)=>a.n-b.n);
   return out;
 }
 function syMergeCams(locales, remotos){
